@@ -1,3 +1,4 @@
+import { fetchNoRedirect } from './fetchNoRedirect';
 /**
  * Server-side Supabase access. All data operations go through the RPCs
  * defined in supabase/migrations/ — no direct table reads/writes exist
@@ -18,9 +19,10 @@ function baseClient(accessToken?: string): SupabaseClient {
   const anonKey = requireEnv('SUPABASE_ANON_KEY');
   return createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
-    ...(accessToken
-      ? { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-      : {}),
+    global: {
+      fetch: fetchNoRedirect,
+      ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
+    },
   });
 }
 
@@ -78,6 +80,18 @@ export function internalRpc<T>(
   return callRpc<T>(baseClient(), fn, { ...args, p_secret: secret });
 }
 
+/** Specific server-only Walk write; hosted hardening revoked anonymous execution. */
+export async function setWalkQuestionsServer(
+  walkId: string, questions: readonly string[],
+): Promise<{ questions: string[] }> {
+  const secret = requireEnv('INTERNAL_API_SECRET');
+  const client = serviceClient();
+  if (!client) throw new RpcError('Question persistence is unavailable.', 503);
+  return callRpc<{ questions: string[] }>(client, 'set_walk_questions', {
+    p_secret: secret, p_walk_id: walkId, p_questions: questions,
+  });
+}
+
 /** Resolve the user from a request's Authorization: Bearer token, or null. */
 export async function getUserFromRequest(request: Request): Promise<{
   user: User;
@@ -102,6 +116,7 @@ function serviceClient(): SupabaseClient | null {
   const key = realEnv('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !key) return null;
   return createClient(url, key, {
+    global: { fetch: fetchNoRedirect },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }

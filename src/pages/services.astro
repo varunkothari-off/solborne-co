@@ -8,18 +8,13 @@ import { walk } from '../data/walk';
 import { roadmap, roadmapCount } from '../data/roadmap';
 
 const pageTitle = 'Services — Solborne & Co.';
-const pageDescription =
-  `One flow, start to finish: ${walk.name.toLowerCase()}, a researched preliminary read, an AI screening call, human review, expert verification, the final audit — and implementation under a retainer if you want it built. The catalog below is what gets delivered inside it.`;
+const pageDescription = 'Client-owned website source and discovery for one business workflow. Review your public facts, keep your website files and agree any further help separately.';
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
-  <PageIntro eyebrow="Services" title="Not a menu. One flow.">
-    <p>
-      Everything here runs in one order, for everyone: you walk, we read, we
-      call, humans check, experts verify — and only then does anything get
-      built. Some of it is free. All of it is checked by a person before it
-      reaches you.
-    </p>
+  <PageIntro eyebrow="Services" title="Your webspace. A clearer next step.">
+    <p>Start with your business story and the facts you want public. The Walk leads to a free static website preview and source files you control.</p>
+    <p>For business workflow discovery, describe one task, the tools you use and the result you need. Hosting, implementation and any AI lead service require a separate scope and agreement.</p>
   </PageIntro>
 
   <Section label="The flow" title="How it flows, start to finish." id="flow">
@@ -51,24 +46,8 @@ const pageDescription =
   </Section>
 
   <Section label="The full catalog" title="What are you trying to do?" id="catalog">
-    <p class="catalog-intro">
-      The flow above is how we work with you. This catalog is what gets
-      delivered inside it — {roadmapCount} workflows across ten categories,
-      each built and ready to run today, delivered by AI with a human expert
-      review pass on every engagement.
-    </p>
-    <p class="catalog-intro catalog-intro--minor">
-      What we don’t claim: a completed paying engagement behind these specific
-      workflows yet. The capability is real and ready; the track record is
-      being built.
-    </p>
-
-    <p class="start-nudge">
-      Not sure where to start? Everyone starts in the same place —
-      <a href={walk.path}>begin the walk</a>, and your read will point at the
-      workflows worth your attention.
-    </p>
-
+    <p class="catalog-intro">These {roadmapCount} workflow examples across ten categories are topics for discovery. Listing a workflow does not mean it is connected, deployed or already proven for your business.</p>
+    <p class="start-nudge">Choose one task to discuss, or <a href={walk.path}>tell your business story through the Walk</a>. The free website source does not depend on buying further help.</p>
     <!-- Filter bar: progressive enhancement only. Hidden until the script
          below wires it up; without JavaScript the category sections render
          expanded and readable, so nothing is lost. -->
@@ -133,7 +112,7 @@ const pageDescription =
                     {category.name}
                   </button>
                 </h3>
-                <span class="cat-desc">{category.description}</span>
+                <span class="cat-desc">Workflow discovery topics</span>
               </span>
               <span class="cat-meta">
                 <span class="cat-count">
@@ -160,7 +139,7 @@ const pageDescription =
                     ) : (
                       <p class="cat-item-name">{item.name}</p>
                     )}
-                    <p class="cat-blurb">{item.blurb}</p>
+                    <p class="cat-blurb">{item.slug === 'website-builder' ? 'Free client-owned HTML and README; hosting is separate.' : 'One-workflow discovery topic; scope and availability need confirmation.'}</p>
                   </li>
                 ))}
               </ul>
@@ -191,25 +170,10 @@ const pageDescription =
     </p>
   </Section>
 
-  <Section label="How engagements run" title="Fixed scope, flat fee, checked work.">
+  <Section label="Further help" title="Agree the next step separately.">
     <div class="prose">
-      <p>
-        Every engagement runs on a fixed scope and a flat fee, both stated in writing
-        before any work begins. The fee we quote is the fee you pay — no meter running, no
-        surprise line items at the end. And everyone starts in the same place: the walk.
-      </p>
-      <p>
-        Every paid deliverable is checked by a human before it reaches you — AI does a
-        share of the work, but nothing you pay for leaves this firm on a model's word
-        alone. The exceptions are the walk and the preliminary read, which are automated —
-        that is what makes them free.
-      </p>
-      <p>
-        Every recommendation carries a confidence level — a number, not a shrug. Where we
-        are sure, you will see it; where we are not, you will see that too. And if your
-        problem belongs to someone else — a different specialty, a different kind of firm —
-        we say so and point you there.
-      </p>
+      <p>The free website source files are yours to keep. Hosting, domain renewal, maintenance and further edits are separate arrangements.</p>
+      <p>Discovery starts with one workflow and a clear result. Any implementation, AI lead pilot or paid engagement needs a written scope and separately accepted terms before work or activation begins.</p>
     </div>
   </Section>
 

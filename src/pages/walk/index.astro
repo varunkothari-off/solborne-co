@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageIntro from '../../components/PageIntro.astro';
 import Section from '../../components/Section.astro';
+import WebsiteInterview from '../../components/WebsiteInterview.astro';
 import { walk, walkParts, partOneQuestions, partThreeFields } from '../../data/walk';
 import { voicePreviewMode } from '../../lib/stt';
 import { isStageStub } from '../../lib/llm';
@@ -14,19 +15,26 @@ import { isStageStub } from '../../lib/llm';
  * Rendered per-request so preview-mode (no STT / no LLM key yet) is honest.
  */
 export const prerender = false;
-const previewMode = voicePreviewMode() || isStageStub('questions');
+const advisoryMode = Astro.url.searchParams.get('mode') !== 'local-export';
+const previewMode = advisoryMode && (voicePreviewMode() || isStageStub('questions'));
 
 const pageTitle = `${walk.name} — Solborne & Co.`;
-const pageDescription =
+const pageDescription = !advisoryMode
+  ? 'Text interview, personalised static preview and free source files you control. No hosting or AI lead service is activated.'
+  :
   `${walk.name}: say it the way it actually is — out loud. We listen, work out ` +
   'the questions worth asking you, research you properly, and hand you an honest ' +
-  'preliminary read on where AI fits your work.';
+  'free website files from the public facts you approve.';
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
-  <PageIntro eyebrow="Start here" title="Where does it actually hurt?">
+  {advisoryMode ? (
+    <>
+  <PageIntro eyebrow="Start here" title="Tell us about your business.">
+    <p>Every business deserves a webspace it owns. Businesses worldwide are welcome.</p>
+    <p role="note">Connected interview activation is pending. Answers are sent to our server; audio uses a transcription provider when enabled. Review each answer, then approve your public website facts. Hosting and an optional lead pilot require separate decisions.</p>
     <p>
-      No forms, no menus — you talk, we listen. {partOneQuestions.length} plain
+      Speak or type, then review and save each answer. {partOneQuestions.length} plain
       questions to start, then the questions your answers earn, then a few typed
       facts so we can research you properly. Most people are done inside
       {walk.targetMinutes} minutes.
@@ -40,18 +48,15 @@ const pageDescription =
           <div class="wk-preview" role="note">
             <p class="wk-preview-label">Preview mode</p>
             <p>
-              The flow is fully working, but voice transcription and the
-              generated follow-up questions aren't connected to live services
-              yet here — recordings get a placeholder transcript, switching on
-              automatically once the keys are added. Report generation is a
-              separate, later step, with its own status once you're a member.
+              Live provider readiness is unverified. Connected intake is disabled until project separation
+              and provider approval are confirmed. Fallback follow-ups and transcripts are previews, not AI results.
             </p>
           </div>
         )
       }
       <noscript>
         <p class="wk-note">
-          The walk needs JavaScript and a microphone. You can also
+          The walk needs JavaScript; a microphone is optional. You can also
           <a href="/contact/">write to us directly</a> — a person reads it.
         </p>
       </noscript>
@@ -69,7 +74,7 @@ const pageDescription =
       <div class="wk-card" data-stage></div>
       <p class="wk-error" data-error hidden></p>
     </div>
-  </Section>
+  </Section><div data-walk-delivery hidden><WebsiteInterview connected /></div>
 
   <script
     type="application/json"
@@ -78,6 +83,7 @@ const pageDescription =
   ></script>
 
   <script>
+    import { walkDeliveryActivation } from '../../lib/walkDeliveryConfig';
     type Field = {
       key: string; label: string; required: boolean;
       type: string; placeholder?: string;
@@ -102,10 +108,15 @@ const pageDescription =
       const fail = (msg: string) => { errorEl.textContent = msg; errorEl.hidden = false; };
       const clearError = () => { errorEl.hidden = true; };
 
-      const STORE_KEY = 'solborne-walk-id';
+      const STORE_KEY = 'solborne-fame-walk-id';
+      let submittedContact: Record<string, string> = {};
 
       const state = {
         walkId: null as string | null,
+        answerBusy: false,
+        lifecycle: 0,
+        questionGeneration: 0,
+        recording: false,
         startedAtMs: null as number | null,
         part: 'intro' as 'intro' | 'one' | 'two' | 'facts' | 'done',
         qIndex: 0,
@@ -202,12 +213,34 @@ const pageDescription =
         });
       }
 
+      const pendingRequests = new Set<AbortController>();
+      window.addEventListener('pagehide', () => {
+        state.lifecycle += 1;
+        pendingRequests.forEach(controller => controller.abort()); pendingRequests.clear();
+        if (recTickHandle) clearInterval(recTickHandle);
+        if (timerHandle) clearInterval(timerHandle);
+        if (recorder) { recorder.onstop = null; if (recorder.state !== 'inactive') recorder.stop(); }
+        mediaStream?.getTracks().forEach(track => track.stop()); mediaStream = null; recorder = null;
+        state.recording = false; state.answerBusy = false;
+      });
+      window.addEventListener('pageshow', event => {
+        if (!event.persisted) return;
+        if (state.part === 'one' || state.part === 'two') showQuestion();
+        if (state.startedAtMs && state.part !== 'done') startTimer();
+      });
       // ---- API ----
       async function api(path: string, init?: RequestInit): Promise<any> {
-        const res = await fetch(path, init);
-        const data = await res.json().catch(() => null);
-        if (!res.ok) throw new Error((data && data.error) || `request failed (${res.status})`);
-        return data;
+        if (!walkDeliveryActivation.projectSeparationVerified || !walkDeliveryActivation.providerCallsApproved) throw new Error('Connected interview is awaiting activation. No answer has been sent.');
+        const headers = new Headers(init?.headers); headers.set('x-solborne-delivery', 'website');
+        const lifecycle = state.lifecycle;
+        const controller = new AbortController(); pendingRequests.add(controller);
+        try {
+          const res = await fetch(path, { ...init, headers, signal: controller.signal });
+          const data = await res.json().catch(() => null);
+          if (state.lifecycle !== lifecycle || !root!.isConnected) throw new Error('Interview was interrupted.');
+          if (!res.ok) throw new Error((data && data.error) || `request failed (${res.status})`);
+          return data;
+        } finally { pendingRequests.delete(controller); }
       }
 
       // ---- Stages ----
@@ -222,7 +255,7 @@ const pageDescription =
           <h3 class="wk-q">Ready when you are.</h3>
           <p class="wk-copy">A timer starts the moment you begin — most people are done
           inside ${cfg.walk.targetMinutes} minutes, longer if you have more to say.</p>
-          <p class="wk-copy wk-copy--quiet">You'll need a microphone. We record each answer,
+          <p class="wk-copy wk-copy--quiet">A microphone is optional; you can type each answer. We record each answer,
           transcribe it word for word, and show you the transcript before you move on.</p>
           <button type="button" class="wk-primary" data-begin>Begin the walk &rarr;</button>`;
         stage.querySelector('[data-begin]')?.addEventListener('click', begin);
@@ -230,13 +263,6 @@ const pageDescription =
 
       async function begin() {
         clearError();
-        try {
-          // Mic permission FIRST — no point starting the timer without it.
-          await ensureMic();
-        } catch {
-          fail('We need microphone access for the walk — your browser blocked it. Allow the mic and try again, or write to us from the contact page.');
-          return;
-        }
         try {
           const created = await api('/api/walks', {
             method: 'POST',
@@ -258,14 +284,6 @@ const pageDescription =
       async function resume(walkId: string) {
         try {
           const w = await api(`/api/walks/${walkId}`);
-          if (w.status !== 'in_progress') {
-            // Already submitted — send them onwards to membership.
-            state.walkId = walkId;
-            state.part = 'done';
-            state.lastResult = null;
-            showDone(null);
-            return;
-          }
           state.walkId = walkId;
           state.startedAtMs = new Date(w.started_at).getTime();
           state.partTwo = w.questions ?? [];
@@ -274,6 +292,7 @@ const pageDescription =
             state.answered[section]?.add(a.index);
             state.transcripts[`${a.section}:${a.index}`] = a.transcript;
           }
+          if (w.status !== 'in_progress') { state.part = 'done'; showDone(null); return; }
           startTimer();
           // Position: first unanswered of part one, else part two, else facts.
           const nextOne = cfg.partOne.findIndex((_, i) => !state.answered.one.has(i));
@@ -296,11 +315,12 @@ const pageDescription =
       }
 
       function showQuestion() {
+        state.questionGeneration += 1;
         renderProgress();
         const q = currentQuestion();
         stage.innerHTML = `
           <p class="wk-eyebrow">${esc(state.part === 'one' ? cfg.parts[0].label : cfg.parts[1].label)}</p>
-          <h3 class="wk-q">${esc(q)}</h3>
+          <h3 class="wk-q">${esc(q)}</h3><button type="button" class="wk-quiet" data-type-answer>Type your answer</button>
           <div class="wk-rec">
             <button type="button" class="wk-mic" data-rec aria-label="Start recording">
               <span class="wk-mic-dot" aria-hidden="true"></span>
@@ -325,6 +345,22 @@ const pageDescription =
       }
 
       function wireRecorder() {
+        // Bind asynchronous work to this question, never a later mutable cursor.
+        const answerWalkId = state.walkId;
+        const answerLifecycle = state.lifecycle;
+        const answerGeneration = state.questionGeneration;
+        let operationGeneration = 0;
+        const questionIsCurrent = (operation?: number) => root!.isConnected && answerLifecycle === state.lifecycle
+          && state.walkId === answerWalkId && answerGeneration === state.questionGeneration && state.part === answerSection && state.qIndex === answerIndex
+          && (operation === undefined || operation === operationGeneration);
+        const answerSection = state.part as 'one' | 'two';
+        const answerIndex = state.qIndex;
+        const answerQuestion = currentQuestion();
+        const setAnswerBusy = (busy: boolean) => {
+          if (!questionIsCurrent()) return;
+          state.answerBusy = busy;
+          stage.querySelectorAll<HTMLButtonElement>('[data-accept], [data-type-answer], [data-edit], [data-cancel-edit], [data-save-edit], [data-again]').forEach(control => { control.disabled = busy || state.recording; });
+        };
         const btn = stage.querySelector<HTMLButtonElement>('[data-rec]')!;
         const recState = stage.querySelector<HTMLElement>('[data-rec-state]')!;
         const transcriptBox = stage.querySelector<HTMLElement>('[data-transcript]')!;
@@ -333,6 +369,15 @@ const pageDescription =
         const viewActions = stage.querySelector<HTMLElement>('[data-view-actions]')!;
         const editActions = stage.querySelector<HTMLElement>('[data-edit-actions]')!;
 
+        btn.disabled = typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia;
+        if (btn.disabled) recState.textContent = 'Audio unavailable; type your answer.';
+        stage.querySelector('[data-type-answer]')?.addEventListener('click', () => {
+          if (editMode || state.answerBusy || state.recording) return;
+          transcriptBox.hidden = false;
+          stage.querySelector<HTMLButtonElement>('[data-edit]')?.click();
+        });
+        const savedTranscript = state.transcripts[`${answerSection}:${answerIndex}`];
+        if (savedTranscript) { transcriptBox.hidden = false; transcriptText.textContent = savedTranscript; }
         let recording = false;
         // While true, the mic button appends a transcribed clip to the edit
         // textarea instead of replacing the saved answer — see onRecorded().
@@ -340,16 +385,20 @@ const pageDescription =
 
         btn.addEventListener('click', async () => {
           clearError();
+          if (state.answerBusy) return;
           if (!recording) {
+            setAnswerBusy(true);
+            const operation = ++operationGeneration;
             try {
               const stream = await ensureMic();
+              if (!questionIsCurrent(operation)) { stream.getTracks().forEach(track => track.stop()); mediaStream = null; return; }
               chunks = [];
               const mime = pickMime();
               recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
               recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
               recorder.onstop = onRecorded;
               recorder.start();
-              recording = true;
+              recording = true; state.recording = true;
               recStartedAt = Date.now();
               btn.classList.add('is-recording');
               btn.setAttribute('aria-label', 'Stop recording');
@@ -358,10 +407,11 @@ const pageDescription =
               }, 500);
               recState.textContent = 'Recording… tap to stop';
             } catch {
+              mediaStream?.getTracks().forEach(track => track.stop()); mediaStream = null;
               fail('Could not start the microphone. Check the browser permission and try again.');
-            }
+            } finally { setAnswerBusy(false); }
           } else {
-            recording = false;
+            recording = false; state.recording = false; setAnswerBusy(true);
             if (recTickHandle) clearInterval(recTickHandle);
             recorder?.stop();
             btn.classList.remove('is-recording');
@@ -370,8 +420,27 @@ const pageDescription =
         });
 
         async function onRecorded() {
-          const blob = new Blob(chunks, { type: recorder?.mimeType || 'audio/webm' });
-          if (Date.now() - recStartedAt < 1200 || blob.size < 1500) {
+          const operation = ++operationGeneration;
+          const clipRecorder = recorder;
+          const clipStream = mediaStream;
+          const clipChunks = chunks.slice();
+          const clipStartedAt = recStartedAt;
+          let tracksReleased = false;
+          const releaseClipTracks = () => {
+            if (tracksReleased) return;
+            tracksReleased = true;
+            clipStream?.getTracks().forEach(track => track.stop());
+            if (mediaStream === clipStream) mediaStream = null;
+          };
+          recording = false; state.recording = false;
+          if (recTickHandle) clearInterval(recTickHandle);
+          btn.classList.remove('is-recording');
+          btn.setAttribute('aria-label', 'Start recording');
+          setAnswerBusy(true);
+          try {
+          const blob = new Blob(clipChunks, { type: clipRecorder?.mimeType || 'audio/webm' });
+          releaseClipTracks();
+          if (Date.now() - clipStartedAt < 1200 || blob.size < 1500) {
             recState.textContent = 'That was very short — tap and take your time.';
             return;
           }
@@ -380,18 +449,20 @@ const pageDescription =
             recState.textContent = 'Transcribing…';
             try {
               const audioBase64 = await blobToBase64(blob);
-              const { transcript } = await api(`/api/walks/${state.walkId}/answers`, {
+              if (!questionIsCurrent(operation)) return;
+              const { transcript } = await api(`/api/walks/${answerWalkId}/answers`, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
-                  section: state.part,
-                  index: state.qIndex,
-                  question: currentQuestion(),
+                  section: answerSection,
+                  index: answerIndex,
+                  question: answerQuestion,
                   audio_base64: audioBase64,
                   mime: blob.type,
                   transcribe_only: true,
                 }),
               });
+              if (!questionIsCurrent(operation)) return;
               const sep = transcriptEdit.value.trim() ? ' ' : '';
               transcriptEdit.value = `${transcriptEdit.value}${sep}${transcript}`;
               recState.textContent = 'Added — keep editing, add more, or save.';
@@ -405,19 +476,21 @@ const pageDescription =
           recState.textContent = 'Transcribing…';
           try {
             const audioBase64 = await blobToBase64(blob);
-            const saved = await api(`/api/walks/${state.walkId}/answers`, {
+            if (!questionIsCurrent(operation)) return;
+            const saved = await api(`/api/walks/${answerWalkId}/answers`, {
               method: 'POST',
               headers: { 'content-type': 'application/json' },
               body: JSON.stringify({
-                section: state.part,
-                index: state.qIndex,
-                question: currentQuestion(),
+                section: answerSection,
+                index: answerIndex,
+                question: answerQuestion,
                 audio_base64: audioBase64,
                 mime: blob.type,
               }),
             });
-            state.transcripts[`${state.part}:${state.qIndex}`] = saved.transcript;
-            state.answered[state.part as 'one' | 'two'].add(state.qIndex);
+            if (!questionIsCurrent(operation)) return;
+            state.transcripts[`${answerSection}:${answerIndex}`] = saved.transcript;
+            state.answered[answerSection].add(answerIndex);
             transcriptText.textContent = saved.transcript;
             transcriptBox.hidden = false;
             recState.textContent = 'Not quite right? Edit it, or record over it.';
@@ -425,16 +498,23 @@ const pageDescription =
             recState.textContent = 'Tap to speak';
             fail(err instanceof Error ? err.message : 'Could not save that answer — try again.');
           }
+          } finally {
+            releaseClipTracks();
+            if (recorder === clipRecorder) recorder = null;
+            setAnswerBusy(false);
+          }
         }
 
         stage.querySelector('[data-accept]')?.addEventListener('click', advance);
 
         stage.querySelector('[data-again]')?.addEventListener('click', () => {
+          if (state.answerBusy || state.recording) return;
           transcriptBox.hidden = true;
           recState.textContent = 'Tap to speak';
         });
 
         stage.querySelector('[data-edit]')?.addEventListener('click', () => {
+          if (editMode || state.answerBusy || state.recording) return;
           editMode = true;
           transcriptEdit.value = transcriptText.textContent ?? '';
           transcriptText.hidden = true;
@@ -446,32 +526,37 @@ const pageDescription =
         });
 
         stage.querySelector('[data-cancel-edit]')?.addEventListener('click', () => {
+          if (state.answerBusy || state.recording) return;
           editMode = false;
           transcriptEdit.hidden = true;
           transcriptText.hidden = false;
           editActions.hidden = true;
           viewActions.hidden = false;
-          recState.textContent = 'Not quite right? Edit it, or record over it.';
+          transcriptBox.hidden = !state.answered[answerSection].has(answerIndex);
+          recState.textContent = 'Review your saved answer, or edit it.';
         });
 
         stage.querySelector('[data-save-edit]')?.addEventListener('click', async () => {
+          if (state.answerBusy || state.recording) return;
           const text = transcriptEdit.value.trim();
           if (!text) { fail('Write or say something before saving.'); return; }
           const saveBtn = stage.querySelector<HTMLButtonElement>('[data-save-edit]')!;
-          saveBtn.disabled = true;
+          const operation = ++operationGeneration;
+          saveBtn.disabled = true; setAnswerBusy(true);
           try {
-            const saved = await api(`/api/walks/${state.walkId}/answers`, {
+            const saved = await api(`/api/walks/${answerWalkId}/answers`, {
               method: 'POST',
               headers: { 'content-type': 'application/json' },
               body: JSON.stringify({
-                section: state.part,
-                index: state.qIndex,
-                question: currentQuestion(),
+                section: answerSection,
+                index: answerIndex,
+                question: answerQuestion,
                 manual_transcript: text,
               }),
             });
-            state.transcripts[`${state.part}:${state.qIndex}`] = saved.transcript;
-            state.answered[state.part as 'one' | 'two'].add(state.qIndex);
+            if (!questionIsCurrent(operation)) return;
+            state.transcripts[`${answerSection}:${answerIndex}`] = saved.transcript;
+            state.answered[answerSection].add(answerIndex);
             transcriptText.textContent = saved.transcript;
             editMode = false;
             transcriptEdit.hidden = true;
@@ -482,13 +567,15 @@ const pageDescription =
           } catch (err) {
             fail(err instanceof Error ? err.message : 'Could not save your edit — try again.');
           } finally {
-            saveBtn.disabled = false;
+            saveBtn.disabled = false; setAnswerBusy(false);
           }
         });
       }
 
       async function advance() {
         clearError();
+        if (state.answerBusy || state.recording) { fail('Finish recording or saving this answer first.'); return; }
+        if (!state.answered[state.part as 'one' | 'two'].has(state.qIndex)) { fail('Save this answer first.'); return; }
         const total = questionsInPart(state.part as 'one' | 'two');
         if (state.qIndex + 1 < total) {
           state.qIndex += 1;
@@ -523,6 +610,7 @@ const pageDescription =
             headers: { 'content-type': 'application/json' },
           });
           state.partTwo = data.questions ?? [];
+          if (data.stub || data.cached) fail(data.cached ? 'Saved questions: provider provenance is unavailable.' : 'Preview follow-ups are fixed fallback questions, not AI-generated.');
           clearInterval(tick);
           if (state.partTwo.length === 0) throw new Error('no questions came back');
           state.part = 'two';
@@ -541,8 +629,8 @@ const pageDescription =
         renderProgress();
         const inputs = cfg.fields
           .map((f) => {
-            const req = f.required ? ' required' : '';
-            const optional = f.required ? '' : ' <span class="wk-optional">(optional)</span>';
+            const req = f.required && f.key !== 'phone' ? ' required' : '';
+            const optional = f.required && f.key !== 'phone' ? '' : ' <span class="wk-optional">(optional)</span>';
             const control =
               f.type === 'textarea'
                 ? `<textarea id="wk-${f.key}" rows="2"${req}></textarea>`
@@ -569,7 +657,7 @@ const pageDescription =
           const el = stage.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#wk-${f.key}`);
           const value = el?.value.trim() ?? '';
           if (value) contact[f.key] = value;
-          if (f.required && !value) {
+          if (f.required && f.key !== 'phone' && !value) {
             fail(`${f.label} is required.`);
             el?.focus();
             return;
@@ -591,7 +679,7 @@ const pageDescription =
             body: JSON.stringify(contact),
           });
           state.part = 'done';
-          state.lastResult = result;
+          state.lastResult = result; submittedContact = contact;
           showDone(result);
         } catch (err) {
           btn.disabled = false;
@@ -602,37 +690,26 @@ const pageDescription =
 
       function showDone(result: Record<string, unknown> | null) {
         renderProgress();
-        const dur = result ? Number(result.duration_seconds) : null;
-        if (dur) freezeTimer(dur);
-        const avg = result ? (result.average_duration_seconds as number | null) : null;
-        const timeLine = dur
-          ? avg
-            ? `You took <strong>${fmt(dur)}</strong>. People usually take about <strong>${fmt(avg)}</strong>.`
-            : `You took <strong>${fmt(dur)}</strong>. You're among the first to walk — once enough people have, we'll show the typical time here.`
-          : 'This walk is already submitted.';
-        stage.innerHTML = `
-          <p class="wk-eyebrow">Done</p>
-          <h3 class="wk-q">That's the walk.</h3>
-          <p class="wk-copy">${timeLine}</p>
-          <p class="wk-copy">Your answers are in. Next: become a member — free — and watch
-          your preliminary read being built from what you said and what we find researching
-          you. Then, if it earns it, the screening call.</p>
-          <a class="wk-primary" href="/login/?walk=${esc(String(state.walkId))}">Become a member — free &rarr;</a>`;
+        if (result?.duration_seconds) freezeTimer(Number(result.duration_seconds));
+        showWebsiteDelivery();
       }
-
+      function showWebsiteDelivery() {
+        const delivery = document.querySelector<HTMLElement>('[data-walk-delivery]')!;
+        root!.hidden = true; delivery.hidden = false;
+        const answers = Object.entries(state.transcripts).map(([key, transcript]) => {
+          const [section, index] = key.split(':'); return { section, index: Number(index), transcript };
+        });
+        document.dispatchEvent(new CustomEvent('solborne-website-delivery', { detail: { walkId: state.walkId, contact: submittedContact, answers } }));
+        delivery.scrollIntoView();
+      }
       // ---- Boot ----
-      if (typeof MediaRecorder === 'undefined') {
-        stage.innerHTML = `<h3 class="wk-q">Your browser can't record audio.</h3>
-          <p class="wk-copy">The walk is voice-first and needs microphone recording.
-          Try a current Chrome, Edge, Safari or Firefox — or
-          <a href="/contact/">write to us directly</a>.</p>`;
-      } else {
-        const stored = localStorage.getItem(STORE_KEY);
-        if (stored) resume(stored);
-        else showIntro();
-      }
+      if (walkDeliveryActivation.projectSeparationVerified && walkDeliveryActivation.providerCallsApproved) { const stored = localStorage.getItem(STORE_KEY); if (stored) resume(stored); else showIntro(); } else showIntro();
     }
   </script>
+    </>
+  ) : (
+    <WebsiteInterview />
+  )}
 </BaseLayout>
 
 <style is:global>

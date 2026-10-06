@@ -1,3 +1,4 @@
+import { fetchNoRedirect } from '../fetchNoRedirect';
 /**
  * REAL ElevenLabs integration — in-browser WebRTC screening sessions.
  * Rewritten 2026-08-06 against the current ElevenAgents API (verified via
@@ -46,7 +47,7 @@ export const elevenLabsReal: VoiceProvider = {
     const url = new URL('https://api.elevenlabs.io/v1/convai/conversation/token');
     url.searchParams.set('agent_id', agentId);
 
-    const res = await fetch(url, {
+    const res = await fetchNoRedirect(url, {
       method: 'GET',
       headers: { 'xi-api-key': apiKey },
     });

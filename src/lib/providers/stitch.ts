@@ -1,3 +1,4 @@
+import { fetchNoRedirect } from '../fetchNoRedirect';
 /**
  * REAL Google Stitch integration — generates illustrative UI screens for the
  * report. Implemented 2026-08-06 against @google/stitch-sdk (verified from the
@@ -62,7 +63,7 @@ function extractProjectId(result: unknown): string | null {
 }
 
 async function downloadImage(url: string): Promise<{ image: Buffer; mime: string }> {
-  const res = await fetch(url);
+  const res = await fetchNoRedirect(url);
   if (!res.ok) throw new Error(`wireframe image download failed (${res.status})`);
   const mime = res.headers.get('content-type') || 'image/png';
   const buf = Buffer.from(await res.arrayBuffer());

@@ -10,56 +10,34 @@ import { flow } from '../data/flow';
 import { walk } from '../data/walk';
 
 const pageTitle = `${site.name} — ${site.tagline}`;
-const pageDescription =
-  'Independent AI advisory for small firms, solo practices, and growing brands. Clear, human-checked answers in plain language — affordable and within reach.';
+const pageDescription = 'Client-owned website source for small firms, solo practices and growing brands, plus practical discovery for one business workflow.';
 
 /** Home highlights: the first three stages of THE FLOW (it is one journey,
     not a menu of services — the full flow lives on /services/). */
 const highlights = flow.slice(0, 3);
 
 const steps = [
-  {
-    num: '01',
-    name: 'Ask',
-    text: 'You say it out loud — no forms. A few plain questions, then the questions your answers earn, and an honest first read — including where AI is not worth your attention.',
-  },
-  {
-    num: '02',
-    name: 'Answer',
-    text: 'Rigorous work in plain language. No jargon, no polished deck that quietly dodges the actual question.',
-  },
-  {
-    num: '03',
-    name: 'Verify',
-    text: 'Every paid deliverable is checked by a human before it reaches you. Confidence gets a number, not a shrug — you see how sure we are, and why.',
-  },
-  {
-    num: '04',
-    name: 'Hand over',
-    text: 'We hand you the reins: the roadmap, the keys, the training to run it yourself. The decision — and the credit — stay with you.',
-  },
+  { num: '01', name: 'Tell your story', text: 'Speak or type in your own words. Review each answer before moving on; follow-ups are based on what you shared.' },
+  { num: '02', name: 'Choose public facts', text: 'Decide which business details, services and contact options belong on your website. Research suggestions require permission and confirmation.' },
+  { num: '03', name: 'Review your website', text: 'Check the generated preview and edit the public fields before downloading. Your private interview is not automatically published.' },
+  { num: '04', name: 'Keep the source', text: 'Download your HTML and ownership README. Hosting, domain renewals and any further implementation are separate arrangements.' },
 ];
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
   {/* No eyebrow on the home masthead — the headline carries it alone. */}
-  <PageIntro lines={['Honest answers about AI.', 'You keep the wheel.']}>
-    <p>
-      Solborne &amp; Co. answers the AI questions that used to require an expensive
-      consultant — rigorously and in plain language, with every paid deliverable
-      checked by a human before it reaches you. Built for small firms, solo practices,
-      and growing brands priced out of good advice.
-    </p>
+  <PageIntro lines={['Every business deserves a webspace.', 'You keep the source.']}>
+    <p>Tell your business story, choose the facts you want public, and keep the source files for your website. Solborne &amp; Co. also helps you frame one business workflow for practical discovery: the task, your current tools and the result you need.</p>
   </PageIntro>
 
   <div class="wrap">
     <div class="cta-row">
       <Button href={walk.path}>Begin the walk</Button>
-      <Button href="/services/" variant="ghost">See how it flows</Button>
+      <Button href="/contact/" variant="ghost">Discuss one workflow</Button>
     </div>
   </div>
 
-  <Section label="How it starts" title="One flow — you talk, we listen, humans check">
+  <Section label="How it starts" title="From your story to website files">
     <div class="service-grid">
       {
         highlights.map((stage, i) => (
@@ -71,7 +49,7 @@ const steps = [
         ))
       }
     </div>
-    <p class="more"><a href="/services/">The whole flow, and the catalog it delivers &rarr;</a></p>
+    <p class="more"><a href="/services/">Website ownership and workflow discovery &rarr;</a></p>
   </Section>
 
   <Section label="How we work" title="Your guide, not your stand-in">
@@ -100,7 +78,7 @@ const steps = [
           confidence={78}
           note="The gap is your data volume; we'd revisit above 10,000 tickets a month."
         />
-        <p class="demo-note">Every answer we hand over carries its number.</p>
+        <p class="demo-note">Illustrative explanation of uncertainty; this is not a client result or measured confidence for your business.</p>
       </div>
     </div>
     <p class="more"><a href="/approach/">Our approach &rarr;</a></p>
@@ -129,13 +107,10 @@ const steps = [
   <section class="cta-band" aria-label="Start a conversation" data-reveal>
     <div class="wrap">
       <div class="stage">
-        <p class="pull">
-          If AI is on your mind and the big firms are out of reach, start with the
-          read that costs nothing.
-        </p>
+        <p class="pull">Start with your business story. Review your public facts and keep your free website source files.</p>
         <div class="cta-row cta-row--stage">
           <Button href={walk.path}>Begin the walk</Button>
-          <Button href="/services/" variant="ghost">See how it flows</Button>
+          <Button href="/contact/" variant="ghost">Discuss one workflow</Button>
         </div>
       </div>
     </div>

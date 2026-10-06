@@ -1,3 +1,4 @@
+import { fetchNoRedirect } from './fetchNoRedirect';
 /**
  * LLM seam for the walk — split into three independently-keyed, independently-
  * modeled stages so each can be tracked and billed separately in the
@@ -18,6 +19,9 @@
  * pricing — question generation ≈ $0.01/walk, research + report combined
  * ≈ $0.15-0.40/walk (see docs/go-live-checklist.md §1a).
  */
+import { fameFollowupSystem, famePreviewFollowups, famePublicResearchSystem } from './fameInterview';
+import { citedBusinessFacts, publicSourceUrl, type CitedBusinessFact } from './walkDelivery';
+import { walkDeliveryActivation } from './walkDeliveryConfig';
 import { envVar, realEnv } from './env';
 import { roadmap } from '../data/roadmap';
 
@@ -86,31 +90,51 @@ export function isStageStub(stage: Stage): boolean {
   return !stageApiKey(stage);
 }
 
-async function anthropicCall(body: Record<string, unknown>, apiKey: string): Promise<string> {
-  const res = await fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': ANTHROPIC_VERSION,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(body),
+interface AnthropicResponseContent {
+  type?: string;
+  text?: string;
+  citations?: unknown[];
+}
+async function anthropicResponse(body: Record<string, unknown>, apiKey: string): Promise<{
+  content: AnthropicResponseContent[]; stop_reason?: string;
+}> {
+  const res = await fetchNoRedirect(ANTHROPIC_URL, {
+    method: 'POST', headers: { 'x-api-key': apiKey, 'anthropic-version': ANTHROPIC_VERSION,
+      'content-type': 'application/json' }, body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`anthropic call failed (${res.status}): ${detail.slice(0, 300)}`);
-  }
-  const data = (await res.json()) as {
-    content?: { type: string; text?: string }[];
-  };
-  // Concatenate text blocks (tool-use blocks from web_search are interleaved).
-  return (data.content ?? [])
-    .filter((b) => b.type === 'text' && b.text)
-    .map((b) => b.text)
-    .join('\n')
-    .trim();
+  if (!res.ok) throw new Error(`Anthropic request failed (${res.status}).`);
+  const data = await res.json();
+  if (!Array.isArray(data.content)) throw new Error('Invalid provider response.');
+  return data;
+}
+async function anthropicCall(body: Record<string, unknown>, apiKey: string): Promise<string> {
+  const data = await anthropicResponse(body, apiKey);
+  return data.content.filter((block) => block.type === 'text' && block.text)
+    .map((block) => block.text).join('\n').trim();
 }
 
+/** Free website research: citations stay attached, never auto-published; no audit/package gate. */
+export async function researchFamePublicFacts(contact: Record<string, string>): Promise<{
+  candidates: CitedBusinessFact[]; status: 'available' | 'unavailable' | 'failed' | 'no-cited-findings';
+}> {
+  const apiKey = stageApiKey('research');
+  if (!walkDeliveryActivation.providerCallsApproved || !apiKey) return { candidates: [], status: 'unavailable' };
+  const website = publicSourceUrl(contact.website);
+  if (!contact.company?.trim() || !website) return { candidates: [], status: 'no-cited-findings' };
+  try {
+    const response = await anthropicResponse({
+      model: stageModel('research'), max_tokens: 1600,
+      system: famePublicResearchSystem + ' Return concise separate factual sentences with web-search citation annotations. ' +
+        'Research only the supplied official business website. Do not infer business identity from private contact details.',
+      messages: [{ role: 'user', content: JSON.stringify({ company: contact.company.slice(0, 200), website }) }],
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6,
+        allowed_domains: [new URL(website).hostname] }],
+    }, apiKey);
+    if (response.stop_reason && response.stop_reason !== 'end_turn') return { candidates: [], status: 'failed' };
+    const candidates = citedBusinessFacts(response.content);
+    return { candidates, status: candidates.length ? 'available' : 'no-cited-findings' };
+  } catch { return { candidates: [], status: 'failed' }; }
+}
 /** Pull the first JSON object/array out of a model reply, tolerant of prose. */
 function extractJson<T>(text: string): T {
   const start = Math.min(
@@ -136,13 +160,7 @@ function extractJson<T>(text: string): T {
 // STUB fallbacks while a stage's ANTHROPIC_API_KEY_<STAGE> key is absent —
 // see docs/human-steps-checklist.md step 1. Zero network calls.
 function stubQuestions(answers: WalkAnswerInput[]): string[] {
-  const mention = answers[2]?.transcript?.slice(0, 60) ?? 'the work you described';
-  return [
-    `You mentioned "${mention}…" — walk us through the last time that actually happened, start to finish.`,
-    'Of everything you described, which single task would you pay to never do again — and what makes it so costly?',
-    'Who else touches this work before it is done — and where does it wait on someone?',
-    'If this were fixed tomorrow, what would you do with the reclaimed time — honestly?',
-  ];
+  return famePreviewFollowups(answers);
 }
 
 function stubReport(answers: WalkAnswerInput[]): WalkReport {
@@ -193,16 +211,7 @@ export async function generateWalkQuestions(
     {
       model: stageModel('questions'),
       max_tokens: 1500,
-      system:
-        'You are the intake engine for Solborne & Co., an independent AI advisory. ' +
-        'Voice: calm, plain, honest, no hype, no exclamation marks, no jargon. ' +
-        'Your one job: from what a visitor SAID out loud, find THE RIGHT QUESTIONS to ask them next — ' +
-        'the questions that reframe their situation and surface what actually matters ' +
-        '(the way "Are you better off than you were four years ago?" reframed an election). ' +
-        'As many or as few as are genuinely right: 3 if 3 are right, 9 if 9 are right (max 12). ' +
-        'Each must be specific to what THEY said (quote their own words where it sharpens the question), ' +
-        'answerable out loud in under two minutes, and free of assumptions they did not state. ' +
-        'Return ONLY a JSON array of question strings. No preamble.',
+      system: fameFollowupSystem,
       messages: [{ role: 'user', content: transcripts }],
     },
     apiKey

@@ -1,3 +1,4 @@
+import { fetchNoRedirect } from '../fetchNoRedirect';
 /**
  * REAL Stripe integration — creates a Checkout Session and returns its
  * hosted-payment URL. paymentProvider() selects THIS module the moment
@@ -29,7 +30,7 @@ export const stripeReal: PaymentProvider = {
   // (double-charge prevention). Returns null if expired/complete/unknown.
   async getOrder(orderId: string): Promise<ExistingOrder | null> {
     const secret = requireEnv('STRIPE_SECRET_KEY');
-    const res = await fetch(
+    const res = await fetchNoRedirect(
       `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(orderId)}`,
       { headers: { authorization: `Bearer ${secret}` } }
     );
@@ -63,7 +64,7 @@ export const stripeReal: PaymentProvider = {
       input.description ?? 'Solborne & Co. — screening package'
     );
 
-    const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    const res = await fetchNoRedirect('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
         authorization: `Bearer ${secret}`,

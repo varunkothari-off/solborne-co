@@ -1,0 +1,196 @@
+---
+import PageIntro from './PageIntro.astro';
+import Section from './Section.astro';
+const { connected = false } = Astro.props;
+---
+
+<div data-website-interview data-connected={connected ? "true" : "false"}>
+  <PageIntro eyebrow="Walk of Fame" title="Every business deserves a webspace it owns.">
+    <p>Businesses worldwide are welcome. Describe your business, review your personalised website, and download the source files free.</p>
+    <p>Your reviewed facts create the files. Optional public research requires permission and explicit fact selection. No hosted website or GitHub repository is created.</p>
+  </PageIntro>
+  <Section label="Your business, in your words">
+    {connected ? <p id="website-privacy">Your saved interview was transmitted through the connected workflow. Review these public fields before exporting; only selected cited facts enter the files.</p> : <p id="website-privacy">Use only information you want public. This interview processes your answers locally and does not send them to a server or store them in app-controlled persistent storage. Your browser may restore form entries or this page; we cannot guarantee browser-data erasure.</p>}
+    <noscript><p>This text interview needs JavaScript to generate files in your browser. No answers can be submitted here with JavaScript off.</p></noscript>
+    <details data-saved-interview hidden><summary>Review your saved interview answers</summary><div data-saved-answers></div><p>Edit the public website fields below; private interview answers are not automatically published.</p></details>
+    <form data-website-form aria-describedby="website-privacy" novalidate>
+      <fieldset disabled>
+        <legend>Tell us about your business</legend>
+        <label>Your business name <input name="businessName" maxlength="120" autocomplete="organization" required /></label>
+        <label>What does your business do? <textarea name="description" rows="4" maxlength="3000" required></textarea></label>
+        <label>Who do you work with? <textarea name="audience" rows="3" maxlength="800" required></textarea></label>
+        <label>What services or products do you offer? One per line. <textarea name="services" rows="4" maxlength="3000" required></textarea></label>
+        <label>Where do you work? (optional) <input name="location" maxlength="200" /></label>
+        <label>What would you like a visitor to do next? <input name="callToAction" maxlength="120" placeholder="For example: Ask about our services" required /></label>
+        <p>Include at least one public contact option. No contact form or lead service is included in the generated website.</p>
+        <label>Business email (optional) <input name="email" type="email" maxlength="254" autocomplete="email" /></label>
+        <label>Business phone with country code (optional) <input name="phone" type="tel" maxlength="40" autocomplete="tel" /></label>
+        <label>Business link (optional) <input name="websiteUrl" type="url" maxlength="500" placeholder="https://" /></label>
+<div data-research-controls hidden><label><input type="checkbox" data-research-permission /> Allow research of my official public website; only company name and URL are sent to the provider.</label><button type="button" data-research>Find cited public facts (optional)</button><div data-candidates></div></div><label><input type="checkbox" data-owner-approval /> I reviewed and approve all public website facts and selected cited suggestions.</label><button type="submit">Create my website preview</button>
+      </fieldset>
+    </form>
+    <div data-website-feedback role="status" aria-live="polite"></div>
+    <section data-website-preview hidden aria-labelledby="website-preview-title">
+      <h2 id="website-preview-title" tabindex="-1">Review your website.</h2>
+      <p>Check every fact before downloading. Contact links may be restricted in this sandboxed preview; verify them in your downloaded file.</p>
+      <iframe data-website-frame title="Your personalised static website preview" sandbox="" referrerpolicy="no-referrer"></iframe>
+      <div class="website-actions">
+        <button type="button" data-website-edit>Edit my answers</button>
+        <button type="button" data-website-download="index.html" disabled>Download website HTML</button>
+        <button type="button" data-website-download="README.txt" disabled>Download ownership README</button>
+      </div>
+      <p>The files are yours to edit or import into a repository in your own GitHub account. No repository or deployment has been created for you.</p>
+    </section>
+    <aside class="website-boundaries" aria-label="Ownership and optional help">
+      <h2>Free source. Your control.</h2>
+      <p>Keep and use the downloaded source files. Hosting, domain registration and renewal, maintenance, and future edits are separate arrangements; this is not a lifetime hosting promise.</p>
+      <p>Optional paid help is separate from your free website. The seven-day premium AI lead pilot is not live here. It needs separately accepted terms and a working auto-stop before activation.</p>
+      <p><a href="/walk/">Start the conversational Walk of Fame</a> and review your public facts before exporting your free website files.</p>
+    </aside>
+  </Section>
+</div>
+
+<script>
+  import { createWebsiteFiles, websiteFields } from '../lib/websitePreview';
+  import { confirmWebsiteBrief, websiteDraftFromInterview, type CitedBusinessFact } from '../lib/walkDelivery';
+  import { walkDeliveryActivation } from '../lib/walkDeliveryConfig';
+  const root = document.querySelector<HTMLElement>('[data-website-interview]');
+  if (root) {
+    const form = root.querySelector<HTMLFormElement>('[data-website-form]')!;
+    const fieldset = form.querySelector<HTMLFieldSetElement>('fieldset')!;
+    const feedback = root.querySelector<HTMLElement>('[data-website-feedback]')!;
+    const preview = root.querySelector<HTMLElement>('[data-website-preview]')!;
+    const frame = root.querySelector<HTMLIFrameElement>('[data-website-frame]')!;
+    const downloads = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-website-download]'));
+    let walkId: string | null = null;
+    let candidates: CitedBusinessFact[] = [];
+    let researchGeneration = 0;
+    let researchController: AbortController | null = null;
+    const invalidateResearch = () => {
+      researchGeneration += 1;
+      researchController?.abort(); researchController = null;
+    };
+    window.addEventListener('pagehide', () => {
+      invalidateResearch();
+      root.querySelector<HTMLInputElement>('[data-research-permission]')!.checked = false;
+    });
+    document.addEventListener('solborne-website-delivery', ((event: CustomEvent) => {
+      invalidateResearch();
+      root.querySelector<HTMLInputElement>('[data-research-permission]')!.checked = false;
+      walkId = event.detail.walkId;
+      const summary = root.querySelector<HTMLElement>('[data-saved-interview]')!;
+      const savedAnswers = root.querySelector<HTMLElement>('[data-saved-answers]')!;
+      savedAnswers.replaceChildren();
+      for (const answer of event.detail.answers) {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = `${answer.section === 'one' ? 'Opening' : 'Follow-up'} answer ${answer.index + 1}: ${answer.transcript}`;
+        savedAnswers.append(paragraph);
+      }
+      summary.hidden = false;
+      files = null; downloads.forEach(button => { button.disabled = true; });
+      frame.removeAttribute('srcdoc'); preview.hidden = true; form.hidden = false;
+      candidates = []; root.querySelector('[data-candidates]')!.replaceChildren();
+      root.querySelector<HTMLInputElement>('[data-owner-approval]')!.checked = false;
+      const draft = websiteDraftFromInterview(event.detail.contact, event.detail.answers);
+      for (const [key, value] of Object.entries(draft)) { const el = form.elements.namedItem(key); if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.value = value; }
+      root.querySelector<HTMLElement>('[data-research-controls]')!.hidden = false;
+    }) as EventListener);
+    let files: ReturnType<typeof createWebsiteFiles> | null = null;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const input: Record<string, string> = {};
+      const data = new FormData(form);
+      for (const key of Object.keys(websiteFields)) input[key] = String(data.get(key) ?? '');
+      const accepted = Array.from(root.querySelectorAll<HTMLInputElement>('[data-fact]:checked')).map(el => el.dataset.fact!);
+      const validation = confirmWebsiteBrief(input, candidates, accepted, root.querySelector<HTMLInputElement>('[data-owner-approval]')!.checked);
+      root.querySelectorAll('[aria-invalid]').forEach((element) => element.removeAttribute('aria-invalid'));
+      if (!validation.ok) {
+        files = null; downloads.forEach((button) => { button.disabled = true; });
+        feedback.textContent = Object.values(validation.errors).join(' ');
+        const firstKey = Object.keys(validation.errors)[0];
+        const field = form.elements.namedItem(firstKey) ?? form.elements.namedItem('email');
+        if (field instanceof HTMLElement) { field.setAttribute('aria-invalid', 'true'); field.focus(); }
+        return;
+      }
+      try {
+        files = createWebsiteFiles(validation.value);
+        frame.srcdoc = files[0].content;
+        preview.hidden = false; form.hidden = true;
+        downloads.forEach((button) => { button.disabled = false; });
+        feedback.textContent = 'Your preview was generated in this browser from your answers. The generated files were not published.';
+        root.querySelector<HTMLElement>('#website-preview-title')?.focus();
+      } catch {
+        files = null; downloads.forEach((button) => { button.disabled = true; });
+        feedback.textContent = 'We could not generate the files. Your answers remain here; please review them and try again.';
+      }
+    });
+    form.addEventListener('input', (event) => {
+      invalidateResearch();
+      if (!(event.target instanceof HTMLInputElement && event.target.hasAttribute('data-owner-approval'))) root.querySelector<HTMLInputElement>('[data-owner-approval]')!.checked = false;
+      files = null; downloads.forEach((button) => { button.disabled = true; });
+      feedback.textContent = 'Create a new preview after editing before downloading.';
+    });
+    root.querySelector('[data-website-edit]')?.addEventListener('click', () => {
+      preview.hidden = true; form.hidden = false;
+      files = null; downloads.forEach((button) => { button.disabled = true; });
+      frame.removeAttribute('srcdoc');
+      form.querySelector<HTMLInputElement>('input')?.focus();
+      feedback.textContent = 'Edit your answers and create a new preview.';
+    });
+    downloads.forEach((button) => button.addEventListener('click', () => {
+      const file = files?.find((item) => item.filename === button.dataset.websiteDownload);
+      if (!file) return;
+      const url = URL.createObjectURL(new Blob([file.content], { type: file.mimeType }));
+      const link = document.createElement('a');
+      link.href = url; link.download = file.filename;
+      document.body.appendChild(link); link.click(); link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+      feedback.textContent = `Download started for ${file.filename}. Your browser controls where it is saved.`;
+    }));
+    root.querySelector('[data-research]')?.addEventListener('click', async () => {
+      const permission = root.querySelector<HTMLInputElement>('[data-research-permission]')!;
+      if (!walkId || !permission.checked) { feedback.textContent = 'Complete the interview and allow public research first.'; return; }
+      if (!walkDeliveryActivation.projectSeparationVerified || !walkDeliveryActivation.providerCallsApproved) { feedback.textContent = 'Public research is unavailable. Continue with your own reviewed facts.'; return; }
+      invalidateResearch();
+      const generation = researchGeneration;
+      const requestedWalkId = walkId;
+      const controller = new AbortController(); researchController = controller;
+      const isCurrentResearch = () => generation === researchGeneration && requestedWalkId === walkId && !controller.signal.aborted && permission.checked;
+      candidates = []; files = null; downloads.forEach(button => { button.disabled = true; });
+      root.querySelector<HTMLInputElement>('[data-owner-approval]')!.checked = false;
+      const box = root.querySelector<HTMLElement>('[data-candidates]')!; box.replaceChildren();
+      const values = new FormData(form);
+      try {
+        const res = await fetch(`/api/walks/${requestedWalkId}/website-research`, { method: 'POST', signal: controller.signal, headers: { 'content-type': 'application/json', 'x-solborne-delivery': 'website' }, body: JSON.stringify({ researchPermission: true, contact: { company: String(values.get('businessName') ?? ''), website: String(values.get('websiteUrl') ?? '') } }) });
+        if (!isCurrentResearch()) return;
+        if (!res.ok) throw new Error('Research unavailable');
+        const data = await res.json();
+        if (!isCurrentResearch()) return;
+        candidates = data.candidates ?? [];
+        for (const fact of candidates) {
+          const label = document.createElement('label'); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.dataset.fact = fact.id;
+          label.append(checkbox, document.createTextNode(fact.claim)); box.append(label);
+          for (const source of fact.sources) { const passage = document.createElement('p'); passage.textContent = `${source.title} — ${source.url}: ${source.supportingPassage}`; box.append(passage); }
+        }
+        feedback.textContent = candidates.length ? 'Confirm only accurate cited facts; leave others unchecked.' : 'No cited facts found. Use your own reviewed facts.';
+      } catch {
+        if (isCurrentResearch()) feedback.textContent = 'Public research is unavailable. Continue with your own reviewed facts.';
+      } finally { if (researchController === controller) researchController = null; }
+    });
+    // Only enable after the no-submit/local-only handler is attached.
+    fieldset.disabled = false;
+  }
+</script>
+
+<style>
+  form { max-width: 48rem; }
+  fieldset { border: var(--border-hairline); border-radius: var(--radius-card); padding: var(--space-md); display: grid; gap: var(--space-sm); }
+  label { display: block; font-size: var(--text-body-sm); }
+  input, textarea { display: block; width: 100%; margin-top: var(--space-2xs); background: var(--color-panel); color: var(--color-ink); border: var(--border-hairline); border-radius: var(--radius-card); padding: var(--space-xs); font: inherit; }
+  button { cursor: pointer; border: var(--border-hairline); border-radius: var(--radius-pill); padding: 0.875rem 1.25rem; background: var(--color-ink); color: var(--color-paper); font: inherit; }
+  button:disabled { cursor: default; opacity: 0.6; }
+  iframe { width: 100%; min-height: 38rem; border: var(--border-hairline); border-radius: var(--radius-card); background: var(--color-paper); }
+  .website-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-block: var(--space-md); }
+  .website-boundaries { margin-top: var(--space-xl); padding-top: var(--space-md); border-top: var(--border-hairline); }
+  [data-website-feedback] { margin-block: var(--space-md); color: var(--color-steel); }
+</style>

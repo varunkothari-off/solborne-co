@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageIntro from '../../components/PageIntro.astro';
 import Section from '../../components/Section.astro';
 import Button from '../../components/Button.astro';
-import { roadmap, roadmapPages, evidenceTiers } from '../../data/roadmap';
+import { roadmap, roadmapPages } from '../../data/roadmap';
 import type { RoadmapCategory, RoadmapItem } from '../../data/roadmap';
 
 /**
@@ -34,146 +34,50 @@ interface Props {
 const { kind, category, item } = Astro.props;
 const isCategory = kind === 'category';
 
-// getStaticPaths only emits items that have a detail, so on item pages this
-// is always defined.
-const detail = item?.detail;
-const tier = detail ? evidenceTiers[detail.benefit.tier] : undefined;
-
-// Everyone starts in the same place: the walk (the intake stage of THE FLOW).
-const diagnosticHref = '/walk/';
-
-const catCount = category.items.length;
+const isWebsiteSource = !isCategory && item?.slug === 'website-builder';
 const pageTitle = isCategory
-  ? `${category.name} — Services — Solborne & Co.`
-  : `${item!.name} — ${category.name} — Solborne & Co.`;
-const pageDescription = isCategory
-  ? `${category.name}: ${catCount === 1 ? 'one built, ready-to-run workflow' : `${catCount} built, ready-to-run workflows`} — delivered by AI with a human expert review pass on every engagement.`
-  : detail!.whatItDoes;
+  ? `${category.name} - Workflow discovery - Solborne & Co.`
+  : `${isWebsiteSource ? 'Client-owned website source' : item!.name} - Solborne & Co.`;
+const pageDescription = isWebsiteSource
+  ? 'Review your public business facts and download free website HTML plus an ownership README. Hosting, domains and future changes are separate arrangements.'
+  : `${isCategory ? category.name : item!.name}: a topic for one-workflow discovery. Scope, availability and any implementation are agreed separately.`;
 ---
 
 <BaseLayout title={pageTitle} description={pageDescription}>
-  {
-    isCategory ? (
-      <>
-        <PageIntro eyebrow="Services" title={category.name}>
-          <p>{category.description}</p>
-          {
-            catCount === 1 ? (
-              <p>
-                One workflow in this category, built and ready to run today —
-                delivered by AI with a human expert review pass on every
-                engagement.
-              </p>
-            ) : (
-              <p>
-                <span class="mono count">{catCount}</span> workflows in this
-                category, each one built and ready to run today — delivered by
-                AI with a human expert review pass on every engagement.
-              </p>
-            )
-          }
-        </PageIntro>
-
-        <Section label="The workflows">
-          <ul class="cat-list" role="list">
-            {category.items.map((entry) => (
-              <li class="cat-item">
-                <div class="cat-text">
-                  {entry.slug ? (
-                    <a class="cat-name cat-link" href={`/services/${entry.slug}/`}>
-                      {entry.name}
-                      <span aria-hidden="true"> &rarr;</span>
-                    </a>
-                  ) : (
-                    <p class="cat-name">{entry.name}</p>
-                  )}
-                  <p class="cat-blurb">{entry.blurb}</p>
-                </div>
-                <p class="cat-tag">Ready to run</p>
-              </li>
-            ))}
-          </ul>
-          <p class="cat-note">
-            What we don’t claim: a completed client engagement behind these
-            specific workflows yet. The capability is real and ready; the track
-            record is being built.
-          </p>
-        </Section>
-
-        <Section label="Next step">
-          <div class="cta-row">
-            <Button href={diagnosticHref}>Begin the walk</Button>
-            <Button href="/services/" variant="ghost">All services</Button>
-          </div>
-        </Section>
-      </>
-    ) : (
-      <>
-        <PageIntro eyebrow={category.name} title={item!.name}>
-          <p>{item!.blurb}</p>
-        </PageIntro>
-
-        <Section label="Status">
-          <div class="ready-panel">
-            <p class="ready-tag">Built &amp; ready to run</p>
-            <p class="ready-line">
-              This is a built, ready-to-run workflow — the system and playbook
-              exist today. Every engagement is delivered by AI with a human
-              expert review pass before anything reaches you.
-            </p>
-            <p class="ready-note">
-              What we don’t claim: a completed client engagement behind this
-              specific workflow yet. The capability is real and ready; the
-              track record is being built. We’d rather tell you that plainly
-              than imply otherwise.
-            </p>
-          </div>
-        </Section>
-
-        <Section label="What it does" title={`What “${item!.name}” produces`}>
-          <p class="prose-lede">{detail!.whatItDoes}</p>
-        </Section>
-
-        <Section label="Who it’s for">
-          <p class="prose">{detail!.target}</p>
-        </Section>
-
-        <Section label="How this is done today" title="The current state, without us">
-          <p class="prose">{detail!.currentState}</p>
-        </Section>
-
-        <Section label="What the numbers say" title="The benefit — and how solid the number is">
-          <div class="benefit">
-            <p class="benefit-claim">{detail!.benefit.claim}</p>
-
-            <div class="tier-card">
-              <p class="tier-eyebrow">Evidence</p>
-              <p class="tier-label">
-                Tier {detail!.benefit.tier} — {tier!.label}
-              </p>
-              <p class="tier-note">{tier!.note}</p>
-              <p class="tier-source">
-                <span class="tier-source-label">Source:</span> {detail!.benefit.source}
-              </p>
+  <PageIntro eyebrow={isCategory ? 'Workflow discovery' : category.name} title={isWebsiteSource ? 'Client-owned website source' : isCategory ? category.name : item!.name}>
+    <p>{pageDescription}</p>
+  </PageIntro>
+  {isCategory ? (
+    <Section label="Discovery topics">
+      <ul class="cat-list" role="list">
+        {category.items.map(entry => (
+          <li class="cat-item">
+            <div class="cat-text">
+              {entry.slug ? <a class="cat-name cat-link" href={`/services/${entry.slug}/`}>{entry.name}</a> : <p class="cat-name">{entry.name}</p>}
             </div>
-
-            <p class="benefit-disclaimer">
-              These are published industry benchmarks on comparable work — not a
-              guarantee of your specific result. What you actually save depends
-              on your volume, your tools, and your workflows.
-            </p>
-          </div>
-        </Section>
-
-        <Section label="Next step">
-          <div class="cta-row">
-            <Button href={diagnosticHref}>Begin the walk</Button>
-            <Button href="/services/" variant="ghost">See the full catalog</Button>
-          </div>
-        </Section>
-      </>
-    )
-  }
+            <p class="cat-tag">Discovery topic</p>
+          </li>
+        ))}
+      </ul>
+      <p class="cat-note">Choose one task and describe the tools, people and result involved. Availability, integrations and delivery scope need confirmation before implementation or AI activation.</p>
+    </Section>
+  ) : isWebsiteSource ? (
+    <Section label="Website ownership" title="Your public facts. Your files.">
+      <p class="prose">The Walk follows your business story through reviewed answers and follow-up questions. You choose the public fields and approve any selected research suggestions before generating a static website preview.</p>
+      <p class="prose">The free deliverable is HTML plus an ownership README that you can download and edit. Hosting, domain registration or renewal, maintenance and future changes require separate arrangements.</p>
+    </Section>
+  ) : (
+    <Section label="Define the task" title="Start with one workflow.">
+      <p class="prose">Describe how this task is done today, your current tools and the result you want. Discovery establishes a useful scope and checks what is feasible for your business.</p>
+      <p class="prose">Any automation, AI service or paid work requires separately agreed terms, suitable integrations and approval before activation. This topic page does not establish a working integration for your business.</p>
+    </Section>
+  )}
+  <Section label="Next step">
+    <div class="cta-row">
+      <Button href={isWebsiteSource ? '/walk/' : '/contact/'}>{isWebsiteSource ? 'Explore the Walk' : 'Business enquiry details'}</Button>
+      <Button href="/services/" variant="ghost">Website source and discovery</Button>
+    </div>
+  </Section>
 </BaseLayout>
 
 <style>

@@ -4,7 +4,9 @@
  */
 export const site = {
   name: 'Solborne & Co.',
-  tagline: 'Honest answers about AI. You keep the wheel.',
+  primaryDomain: 'solborne.in',
+  outreachDomain: 'getsolborne.com',
+  tagline: 'Every business deserves a webspace it owns.',
   /* Placeholder address — confirm before launch (see README decisions). */
   email: 'hello@solborne.com',
   /* ============================================================
@@ -14,3 +16,6 @@ export const site = {
      ============================================================ */
   showCaseStudies: false,
 } as const;
+
+/** Owner-approved proposed alias; publish a mail link only after delivery verification. */
+export const enquiryContact = { email: 'enquiries@solborne.in', brandedDomain: 'solborne.in', verified: false };

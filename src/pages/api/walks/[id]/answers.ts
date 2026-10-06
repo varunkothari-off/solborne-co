@@ -20,12 +20,14 @@ import { json, errorResponse, isUuid } from '../../../../lib/api';
 import { rateLimit, clientKey, tooManyRequests } from '../../../../lib/rateLimit';
 import { sttProvider } from '../../../../lib/stt';
 
+import { walkDeliveryActivation } from '../../../../lib/walkDeliveryConfig';
 export const prerender = false;
 
 // ~9 MB of audio after base64 inflation — several minutes of opus speech.
 const MAX_BODY = 12_500_000;
 
 export const POST: APIRoute = async ({ request, params, clientAddress }) => {
+  if (request.headers.get('x-solborne-delivery') === 'website' && (!walkDeliveryActivation.projectSeparationVerified || !walkDeliveryActivation.providerCallsApproved)) return new Response(JSON.stringify({ error: 'Connected website interview is awaiting activation.' }), { status: 503, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
   const rl = rateLimit(clientKey(clientAddress, request, 'walk-answers'), 30, 60_000);
   if (!rl.ok) return tooManyRequests(rl);
   if (!isUuid(params.id)) return json({ error: 'invalid walk id' }, 400);

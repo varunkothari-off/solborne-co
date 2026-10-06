@@ -1,0 +1,26 @@
+/** Synthetic/off-host only. Production activation config is never modified. */
+import {readFileSync} from 'node:fs';
+import {JSDOM} from 'jsdom';
+import {build} from '../validation/node_modules/esbuild/lib/main.js';
+import assert from 'node:assert/strict';
+const base=new URL('../validation/',import.meta.url);
+const config=readFileSync(new URL('src/lib/walkDeliveryConfig.ts',base),'utf8');
+assert.match(config,/projectSeparationVerified: false/);assert.match(config,/providerCallsApproved: false/);
+const source=readFileSync(new URL('src/components/WebsiteInterview.astro',base),'utf8').match(/<script>\s*([\s\S]*?)<\/script>/)[1];
+const result=await build({stdin:{contents:source,resolveDir:new URL('src/components/',base).pathname,loader:'ts'},bundle:true,write:false,format:'iife',plugins:[{name:'synthetic-research-gates-only',setup(plugin){plugin.onLoad({filter:/walkDeliveryConfig\.ts$/},()=>({contents:'export const walkDeliveryActivation = {projectSeparationVerified:true,providerCallsApproved:true};',loader:'ts'}));}}]});
+const dom=new JSDOM(readFileSync(new URL('local-export.html',import.meta.url),'utf8'),{url:'https://solborne.in/walk/?mode=local-export',runScripts:'outside-only'});
+const w=dom.window;const requests=[];
+w.fetch=(url,options)=>new Promise(resolve=>{requests.push({url,options,resolve});});
+w.eval(result.outputFiles[0].text);
+const el=s=>w.document.querySelector(s);const settle=()=>new Promise(resolve=>setTimeout(resolve,0));
+const handoff=(id,company)=>w.document.dispatchEvent(new w.CustomEvent('solborne-website-delivery',{detail:{walkId:id,contact:{company,email:'public@example.org',website:'https://example.org'},answers:[{section:'one',index:0,transcript:'Synthetic story'}]}}));
+const respond=request=>request.resolve({ok:true,json:async()=>({candidates:[{id:'fact-0',claim:'Prior interview claim',ownerConfirmed:false,sources:[{url:'https://example.org/about',title:'About',supportingPassage:'Synthetic source'}]}]})});
+handoff('walk-a','Business A');el('[data-research-permission]').checked=true;el('[data-research]').click();assert.equal(requests.length,1);
+handoff('walk-b','Business B');assert.equal(el('[data-research-permission]').checked,false);assert.equal(requests[0].options.signal.aborted,true);respond(requests[0]);await settle();assert.equal(el('[data-candidates]').textContent,'');assert.equal(el('[data-owner-approval]').checked,false);
+console.log('PASS: new handoff resets research consent, aborts old request and ignores its late response');
+el('[data-research-permission]').checked=true;el('[data-research]').click();assert.equal(requests.length,2);el('[name=businessName]').value='Changed B';el('[name=businessName]').dispatchEvent(new w.Event('input',{bubbles:true}));respond(requests[1]);await settle();assert.equal(requests[1].options.signal.aborted,true);assert.equal(el('[data-candidates]').textContent,'');
+console.log('PASS: identity edit invalidates pending research without repopulating stale findings');
+el('[data-research-permission]').checked=true;el('[data-research]').click();assert.equal(requests.length,3);respond(requests[2]);await settle();assert.match(el('[data-candidates]').textContent,/Prior interview claim/);assert.equal(el('[data-fact]').checked,false);
+handoff('walk-c','Business C');assert.equal(el('[data-candidates]').textContent,'');assert.equal(el('[data-research-permission]').checked,false);assert.equal(el('[data-owner-approval]').checked,false);
+console.log('PASS: current synthetic response is reviewable but never auto-approved; subsequent handoff clears it');
+assert.equal(requests.length,3);dom.window.close();

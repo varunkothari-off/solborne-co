@@ -1,3 +1,4 @@
+import { fetchNoRedirect } from './fetchNoRedirect';
 /**
  * Speech-to-text seam for the walk's voice answers.
  *
@@ -36,7 +37,7 @@ const elevenLabsStt: TranscriptionProvider = {
       new Blob([new Uint8Array(audio)], { type: mime || 'audio/webm' }),
       'answer.webm'
     );
-    const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+    const res = await fetchNoRedirect('https://api.elevenlabs.io/v1/speech-to-text', {
       method: 'POST',
       headers: { 'xi-api-key': apiKey },
       body: form,

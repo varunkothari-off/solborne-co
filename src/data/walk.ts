@@ -1,15 +1,15 @@
 /**
  * The Walk — voice-first intake flow. Naming and the fixed Part-1 questions.
  *
- * NAMING: the working name is the founder's pick, pending naming research.
+ * NAMING: Walk of Fame is the owner-approved interview name.
  * It is deliberately defined ONCE here — change these three strings and the
  * whole site follows.
  */
 export const walk = {
   /** The flow's name as shown in copy. */
-  name: 'The Walk of Pain',
+  name: 'The Walk of Fame',
   /** Short form for the nav pill / buttons. */
-  cta: 'Walk of Pain',
+  cta: 'Walk of Fame',
   /** Route. */
   path: '/walk/',
   /** Target duration surfaced in copy. */
@@ -28,16 +28,15 @@ export const walkParts = [
 /**
  * Part 1 — the fixed voice questions, identical for everyone. Their job is to
  * surface the raw material from which Part 2's "right questions" are derived:
- * context → where time goes → the dread → what's been tried → the wish.
+ * story → strengths → customer value → public proof → next step.
  */
 export const partOneQuestions: readonly string[] = [
-  'Tell us about your work — what do you do, and who do you do it for?',
-  'Walk us through a normal week. Where does your time actually go?',
-  'What part of your work do you dread — the thing that eats hours and gives little back?',
-  'What have you already tried to fix it — tools, hires, AI, anything — and what actually happened?',
-  'If one thing about how you work could be different six months from now, what would it be?',
+  'Tell us your business story - what do you do, who do you serve, and what led you here?',
+  'What are you proudest of in your work, and what makes your approach different?',
+  'What do your customers gain from working with you? Share an example you are comfortable making public.',
+  'What public proof, work samples or official links could support that story, and what should stay private?',
+  'What should someone understand about your business when they visit your website, and what should they do next?',
 ];
-
 /** Part 3 — the typed facts. Only name + email are mandatory. */
 export interface WalkContactField {
   key: string;
