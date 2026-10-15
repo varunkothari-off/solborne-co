@@ -1,0 +1,26 @@
+/* One public header for the homepage, Walk and saved versions. */
+.site-header.header{display:flex;position:relative;align-items:center;justify-content:space-between;gap:24px;padding-block:18px;border-bottom:var(--border-hairline)}
+.site-header.header .wordmark{display:flex;align-items:center;gap:14px;flex-shrink:0;color:var(--color-ink);font-size:23px;font-weight:500;letter-spacing:.005em;line-height:1.2;text-decoration:none}
+.site-header.header .wordmark .bearing-mark{display:block;width:30px;height:34px;flex-shrink:0}
+.site-header.header nav{display:flex;position:static;align-items:center;gap:20px;padding:0;background:transparent;border:0;box-shadow:none;font:11px/1.5 var(--font-mono);letter-spacing:.06em}
+.site-header.header nav a{display:inline-flex;align-items:center;min-height:44px;padding:10px 0;color:var(--color-body);font:inherit;text-decoration:none;text-transform:uppercase;white-space:nowrap;box-sizing:border-box}
+.site-header.header nav a:hover,.site-header.header nav a[aria-current=page]{color:var(--color-ink);text-decoration:underline;text-underline-offset:5px}
+.site-header.header nav .nav-cta{background:var(--color-ink);color:var(--color-paper);border:1px solid var(--color-ink);border-radius:100px;padding:11px 18px}
+.site-header.header nav .nav-cta:hover{background:var(--color-steel);border-color:var(--color-steel);color:var(--color-paper)}
+.site-header.header nav .nav-cta[aria-current=page]{color:var(--color-paper)}
+.site-header.header .menu-toggle{display:none;min-height:44px;min-width:60px;padding:9px 12px;border:1px solid var(--color-stone);border-radius:100px;background:transparent;color:var(--color-ink);font:12px/1.5 var(--font-mono);cursor:pointer}
+.site-header :focus-visible{outline:2px solid var(--color-steel);outline-offset:4px}
+@media(max-width:1040px){
+  .site-header.header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 12px;padding-block:17px}
+  .site-header.header .wordmark{font-size:22px;gap:12px;min-height:44px}
+  .site-header.header .wordmark .bearing-mark{width:27px;height:31px}
+  .site-header.header .menu-toggle:not([hidden]){display:block}
+  .site-header.header nav{grid-column:1/-1;display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:14px 0 0;font-size:12px;white-space:normal}
+  .site-header.header[data-nav-ready] nav{display:none}
+  .site-header.header[data-nav-ready] nav.open{display:flex}
+  .site-header.header nav a{padding:10px 12px;white-space:normal}
+  .site-header.header nav .nav-cta{justify-content:center;margin-block:4px}
+}
+
+/* Approved Source Serif 4 outline; fixed geometry from first paint without a font swap. */
+.wordmark .brand-wordmark-vector{display:block;width:7.118300em;height:1.2em;flex-shrink:0}

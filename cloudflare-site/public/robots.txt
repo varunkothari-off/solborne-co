@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /downloads/
+Disallow: /walk
+Disallow: /versions.html
+Disallow: /start.html
+Sitemap: https://solborne.in/sitemap.xml

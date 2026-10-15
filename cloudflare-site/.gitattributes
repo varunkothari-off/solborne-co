@@ -1,0 +1,2 @@
+# Preserve reviewed bytes and generated artifact hashes on Windows checkouts.
+* -text

@@ -1,0 +1,136 @@
+/* ==========================================================================
+   Solborne & Co. — Design tokens
+   ==========================================================================
+   THE single source of truth for every theme value on the site.
+   Extracted from the authoritative design source:
+   design/Solborne_Brand_-_Final_Direction__standalone_.html ("Bearing").
+
+   Rules carried over from the brand usage guardrails:
+   - Paper and Ink do almost all the work.
+   - Bearing amber is ONE accent per view — never a fill, never body text,
+     never given rays, a disc, or a glow (it is a bearing, not a sun).
+   - Steel + Plex Mono wherever a confidence level, price, or figure appears.
+   - The horizon (any rule/underline derived from the mark) stays level.
+   ========================================================================== */
+
+:root {
+  /* ---- Color: core palette (names from the brand sheet) ---- */
+  --color-ink: #211d18;      /* warm near-black — text, the mark, everything load-bearing */
+  --color-paper: #f1ebdd;    /* warm oat — primary ground */
+  --color-panel: #f7f3ea;    /* lighter oat — card surfaces */
+  --color-bearing: #c1872e;  /* marigold — the fixed point of light, used sparingly */
+  --color-steel: #375562;    /* calm steel — links, figures, confidence, depth */
+  --color-stone: #8b8274;    /* warm grey — rules, labels, secondary text */
+  --color-line: #ded6c6;     /* hairline borders */
+
+  /* ---- Color: supporting shades (from the design file's body styles) ---- */
+  --color-body: #4a453c;         /* standard body copy on Paper */
+  --color-body-strong: #3a362f;  /* denser body copy / conclusions */
+  --color-negative: #9a4b39;     /* warm rust — "don't" / fail states only */
+  --color-positive: #4f7a51;     /* muted green — "do" states only */
+  --color-track: #e4dccb;        /* confidence-bar track */
+  --color-bearing-wash: rgba(193, 135, 46, 0.07); /* highlight wash — the ONLY permitted amber surface */
+
+  /* ---- Color: page background wash ---- */
+  --gradient-page: radial-gradient(
+    circle at 50% -8%,
+    #f6f1e6 0%,
+    #f1ebdd 48%,
+    #e9e1d1 100%
+  );
+
+  /* ---- Typography: families ---- */
+  --font-display: 'Source Serif 4 Variable', 'Source Serif 4', georgia, serif;
+  --font-body: 'Public Sans Variable', 'Public Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* ---- Typography: weights ---- */
+  --weight-body: 300;         /* Public Sans default per design file */
+  --weight-body-medium: 400;
+  --weight-body-semibold: 600;
+  --weight-display: 500;      /* Source Serif 4 headline weight */
+  --weight-mono: 400;
+  --weight-mono-medium: 500;
+
+  /* ---- Typography: scale (desktop values from the design file) ---- */
+  --text-hero: clamp(2.5rem, 1.5rem + 4vw, 3.75rem);      /* 60px masthead h1 */
+  --text-h2: clamp(1.75rem, 1.4rem + 1.5vw, 2.125rem);    /* 34px section h2 */
+  --text-h3: 1.3125rem;                                   /* 21px card names */
+  --text-lede: clamp(1.25rem, 1.1rem + 0.6vw, 1.4375rem); /* 23px serif lede */
+  --text-body-lg: 1.125rem;   /* 18px masthead intro */
+  --text-body: 1rem;          /* 16px running copy */
+  --text-body-sm: 0.9375rem;  /* 15px dense copy */
+  --text-caption: 0.84375rem; /* 13.5px notes */
+  --text-eyebrow: 0.71875rem; /* 11.5px mono eyebrow */
+  --text-label: 0.6875rem;    /* 11px mono section label */
+  --text-tag: 0.65625rem;     /* 10.5px mono tags */
+
+  /* ---- Typography: line heights ---- */
+  --leading-hero: 1.04;
+  --leading-heading: 1.1;
+  --leading-lede: 1.42;
+  --leading-body: 1.72;
+  --leading-intro: 1.64;
+  --leading-tight: 1.55;
+
+  /* ---- Typography: letterspacing (mono label system) ---- */
+  --tracking-eyebrow: 0.34em;
+  --tracking-label: 0.28em;
+  --tracking-block-label: 0.26em;
+  --tracking-footer: 0.22em;
+  --tracking-tag: 0.16em;
+  --tracking-tagline: 0.4em;
+
+  /* ---- Spacing scale ---- */
+  --space-2xs: 0.375rem;  /*  6px */
+  --space-xs: 0.75rem;    /* 12px */
+  --space-sm: 1rem;       /* 16px */
+  --space-md: 1.625rem;   /* 26px — the design file's card gap */
+  --space-lg: 2.5rem;     /* 40px */
+  --space-xl: 3rem;       /* 48px — column gap */
+  --space-2xl: 4rem;      /* 64px — section padding top */
+  --space-3xl: 7rem;      /* 112px — masthead top */
+
+  /* ---- Layout ---- */
+  --width-wrap: 71.25rem;    /* 1140px content column */
+  --width-measure: 74ch;     /* long-form copy measure */
+  --width-intro: 38.75rem;   /* 620px centered intro measure */
+  --gutter: 2.5rem;          /* 40px side padding */
+  --gutter-narrow: 1.25rem;  /* 20px side padding under 760px */
+
+  /* ---- Radii ---- */
+  --radius-card: 8px;
+  --radius-swatch: 6px;
+  --radius-pill: 100px;
+
+  /* ---- Shadows (warm, derived from Ink — never grey-blue) ---- */
+  --shadow-stage:
+    0 1px 0 rgba(255, 255, 255, 0.6),
+    0 30px 60px -34px rgba(33, 29, 24, 0.4),
+    0 2px 10px -5px rgba(33, 29, 24, 0.16);
+  --shadow-card:
+    0 1px 0 rgba(255, 255, 255, 0.5),
+    0 18px 40px -30px rgba(33, 29, 24, 0.4);
+
+  /* ---- Borders ---- */
+  --border-hairline: 1px solid var(--color-line);
+
+  /* ---- Motion ----
+     Restraint is the brand: small distances, quiet easings, nothing
+     cinematic. Reveals are disabled entirely under prefers-reduced-motion
+     (see global.css) and without JavaScript. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-reveal: 600ms;
+  --reveal-distance: 14px;
+  --reveal-tracking: 0.02em; /* headings settle from this to 0 on reveal */
+
+  /* ---- Breakpoints (reference only — CSS custom properties cannot be
+       used in @media queries; keep these in sync manually) ----
+     --bp-sm: 640px   (single column everywhere below this)
+     --bp-md: 760px   (design file's card/table collapse point)
+     --bp-lg: 860px   (design file's two-column collapse point)
+  */
+}
+
