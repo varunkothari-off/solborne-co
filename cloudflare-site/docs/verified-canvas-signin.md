@@ -1,5 +1,22 @@
 # Verified canvas sign-in
 
+## Hosted checkpoint - 16 October 2026
+
+Google's Solborne app is in production and its logo/domain branding is verified
+and published. The exact application callback is allowlisted; only OpenID, email
+and profile scopes are configured. The Google client secret exists only in the
+Supabase provider setting. The project uses its existing Supabase callback host.
+
+Migration 0005 is applied only to the Solborne intake D1. Google sign-in is enabled;
+email-code fallback is disabled pending a production sender. Hosted owner login,
+the protected PDF download, enquiry save and the separate Walk access were
+verified. A labelled owner test enquiry was also confirmed in
+`solborne_presales.enquiries`, with no pending sync record. This is a functional
+test, not a new customer. KFS records and policies were not changed.
+
+The Gemini-powered interview remains disabled pending the API key. No generated
+website or automated customer workflow is represented as activated by sign-in.
+
 ## Journey
 
 Verified sign-in -> free PDF/text canvas -> enquiry -> separate Walk of Fame.
