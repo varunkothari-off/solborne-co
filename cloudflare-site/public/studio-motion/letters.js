@@ -3,9 +3,33 @@ import {step} from './letter-physics.js';
 const board = document.querySelector('.india-board');
 if (board) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const states = [...board.querySelectorAll('.play-shape')].map(el => ({el,x:0,y:0,vx:0,vy:0,drag:null,suppressClick:false}));
+  const layer=document.createElement('div');
+  layer.className='india-flight-layer';
+  document.body.append(layer);
+  const states = [...board.querySelectorAll('.play-shape')].map(el => ({el,x:0,y:0,vx:0,vy:0,drag:null,suppressClick:false,home:null}));
   let frame=0, last=0;
-  const paint = s => {s.el.style.transform=`translate(${s.x}px,${s.y}px)`;};
+  const float = s => {
+    if(s.home)return;
+    const rect=s.el.getBoundingClientRect(),focused=document.activeElement===s.el;
+    s.home=document.createElement('span');s.home.className='india-shape-home';s.home.setAttribute('aria-hidden','true');
+    s.home.style.height=`${rect.height}px`;
+    s.el.before(s.home);layer.append(s.el);s.el.classList.add('in-flight');
+    s.el.style.width=`${rect.width}px`;s.el.style.height=`${rect.height}px`;
+    if(focused)s.el.focus({preventScroll:true});
+  };
+  const land = s => {
+    if(!s.home)return;
+    const focused=document.activeElement===s.el;
+    s.home.replaceWith(s.el);s.home=null;s.el.classList.remove('in-flight');
+    for(const prop of ['left','top','width','height'])s.el.style.removeProperty(prop);
+    if(focused)s.el.focus({preventScroll:true});
+  };
+  const paint = s => {
+    if(s.drag||s.x||s.y)float(s);
+    if(s.home){const home=s.home.getBoundingClientRect();s.el.style.left=`${home.left}px`;s.el.style.top=`${home.top}px`;}
+    s.el.style.transform=`translate(${s.x}px,${s.y}px)`;
+    if(!s.drag&&!s.x&&!s.y&&!s.vx&&!s.vy)land(s);
+  };
   const reset = () => {
     cancelAnimationFrame(frame);frame=0;
     states.forEach(s=>{
@@ -33,17 +57,20 @@ if (board) {
     });
     s.el.addEventListener('pointerdown',e=>{
       if(!e.isPrimary||e.button!==0)return;
-      const r=s.el.getBoundingClientRect(),b=board.getBoundingClientRect();
+      const r=s.el.getBoundingClientRect();
+      float(s);
       s.suppressClick=false;
-      s.drag={id:e.pointerId,startX:e.clientX-s.x,startY:e.clientY-s.y,t:e.timeStamp,px:s.x,py:s.y,minX:b.left-r.left+s.x+4,maxX:b.right-r.right+s.x-4,moved:false};
+      s.drag={id:e.pointerId,grabX:e.clientX-r.left,grabY:e.clientY-r.top,t:e.timeStamp,px:s.x,py:s.y,moved:false};
+      paint(s);
       s.vx=s.vy=0;s.el.setPointerCapture(e.pointerId);s.el.classList.add('grabbed');
     });
     s.el.addEventListener('pointermove',e=>{
       const d=s.drag;if(!d||e.pointerId!==d.id)return;
-      s.x=Math.max(d.minX,Math.min(d.maxX,e.clientX-d.startX));s.y=Math.max(-65,Math.min(65,e.clientY-d.startY));
+      const home=s.home.getBoundingClientRect();
+      s.x=e.clientX-home.left-d.grabX;s.y=e.clientY-home.top-d.grabY;
       if(Math.abs(s.x-d.px)+Math.abs(s.y-d.py)>2)d.moved=true;
       const dt=Math.max(8,e.timeStamp-d.t)/1000;
-      s.vx=Math.max(-450,Math.min(450,(s.x-d.px)/dt));s.vy=Math.max(-250,Math.min(250,(s.y-d.py)/dt));
+      s.vx=(s.x-d.px)/dt;s.vy=(s.y-d.py)/dt;
       d.px=s.x;d.py=s.y;d.t=e.timeStamp;paint(s);
     });
     const release=e=>{
@@ -59,9 +86,12 @@ if (board) {
       if(!dirs[e.key])return;e.preventDefault();const [x,y]=dirs[e.key];s.vx=x*130;s.vy=y*100;run();
     });
   });
+  const instructions=board.querySelector('#shape-instructions');
+  if(instructions?.firstChild)instructions.firstChild.textContent='Drag the INDIA shapes anywhere. Throw them off-screen. They always find their way home. ';
   board.querySelector('.letter-help').hidden=false;
   board.querySelector('[data-reset-shapes]').addEventListener('click',reset);
   addEventListener('resize',reset);reduced.addEventListener('change',reset);
+  addEventListener('scroll',()=>states.forEach(s=>{if(s.home)paint(s);}),{passive:true});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});
 }
 /* Fit the complete static name, including & Co., to its divider width without stretching glyphs. */
