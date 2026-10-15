@@ -1,3 +1,5 @@
+import {resolve} from 'node:path';
+const testWranglerPath=resolve('existing','wrangler.js');
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -54,7 +56,7 @@ test('owner metadata treats a null-project legacy root as earlier after a real s
 });
 
 test('operator tool defaults to local, installs nothing and pins isolated D1',()=>{
-  const options=parseArguments(['list','--wrangler','C:\\existing\\wrangler.js']);assert.equal(options.remote,false);assert.equal(parseArguments(['list','--wrangler','C:\\existing\\wrangler.js','--remote']).remote,true);
+  const options=parseArguments(['list','--wrangler',testWranglerPath]);assert.equal(options.remote,false);assert.equal(parseArguments(['list','--wrangler',testWranglerPath,'--remote']).remote,true);
   const config=JSON.parse(readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8'));assert.doesNotThrow(()=>pinnedConfig(config));assert.throws(()=>pinnedConfig({...config,d1_databases:[{...config.d1_databases[0],database_id:'other-db'}]}),/isolated/);assert.throws(()=>parseArguments(['list','--wrangler','npx']),/existing Wrangler/);
   assert.throws(()=>reviewQuery(completion,"reviewed'; DROP TABLE x;--",'pending'),/valid/);assert.throws(()=>filesQuery('../../public/index.html'),/valid/);assert.throws(()=>reviewQuery(completion,'pending','pending'),/different/);
 });
@@ -107,8 +109,8 @@ test('release storage rejection never reports success and a later safe retry cre
 });
 
 test('release CLI accepts only strict references and preserves local default',()=>{
-  const parsed=parseArguments(['release',completion,'--wrangler','C:\\existing\\wrangler.js']);assert.equal(parsed.remote,false);assert.equal(parsed.action,'release');
-  assert.throws(()=>parseArguments(['release','../../public/index.html','--wrangler','C:\\existing\\wrangler.js']),/valid/);
-  assert.throws(()=>parseArguments(['release',completion,'--status','reviewed','--wrangler','C:\\existing\\wrangler.js']),/only apply/);
+  const parsed=parseArguments(['release',completion,'--wrangler',testWranglerPath]);assert.equal(parsed.remote,false);assert.equal(parsed.action,'release');
+  assert.throws(()=>parseArguments(['release','../../public/index.html','--wrangler',testWranglerPath]),/valid/);
+  assert.throws(()=>parseArguments(['release',completion,'--status','reviewed','--wrangler',testWranglerPath]),/only apply/);
   assert.throws(()=>releaseQuery(completion,-1),/valid/);assert.throws(()=>releaseLookupQuery('not-a-reference'),/valid/);
 });

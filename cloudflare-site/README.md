@@ -14,7 +14,7 @@ npm run build
 npm test
 ```
 
-Before a **production** build, the owner must provide the existing `private/canvas.pdf` and `private/canvas.txt` deployment inputs. These gated intake materials are intentionally absent from this public repository. Credentials, customer data, private receipts, owner captures and generated private payloads are also excluded. CI uses explicitly synthetic fixture bytes to exercise access controls; its build is not a deployment artifact.
+Before a **production** build, the owner must provide the existing `private/canvas.pdf` and `private/canvas.txt` deployment inputs. These gated intake materials are intentionally absent from this public repository. Credentials, customer data, private receipts, owner captures and generated private payloads are also excluded. CI uses explicitly synthetic fixture bytes to exercise access controls; its build is not a deployment artifact. The single test pinning the private production-canvas hashes is explicitly skipped in public CI. That check remains enabled in the full owner-workspace test run.
 
 Deployment is manual with the owner's authenticated Wrangler account and the existing secret store. Do not create or migrate a database as part of this website release. Do not enable `AI_WALK_ENABLED` without the provider and owned end-to-end checks in `docs/ai-activation.md`.
 
