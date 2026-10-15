@@ -12,7 +12,7 @@ export function authConfigured(env){try {const u=new URL(env.SUPABASE_URL);retur
 export const authEnabled=env=>env.AUTH_ENABLED==='true';
 function origin(env){try{const u=new URL(env.SITE_ORIGIN);return u.protocol==='https:'&&u.pathname==='/'?u.origin:null;}catch{return null;}}
 function sameOrigin(r,env){return !!origin(env)&&r.headers.get('Origin')===origin(env)&&!['cross-site','none'].includes(r.headers.get('Sec-Fetch-Site'));}
-async function api(env,path,{method='GET',body,access}={},fetcher=fetch){return fetcher(new URL('/auth/v1/'+path,env.SUPABASE_URL),{method,redirect:'error',headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,...(access?{Authorization:'Bearer '+access}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(12000)});}
+async function api(env,path,{method='GET',body,access}={},fetcher=fetch){return fetcher(new URL('/auth/v1/'+path,env.SUPABASE_URL),{method,redirect:'manual',headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,...(access?{Authorization:'Bearer '+access}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(12000)});}
 export function verifiedUser(user){return !!user&&typeof user.id==='string'&&/^[a-f0-9-]{36}$/i.test(user.id)&&user.is_anonymous!==true&&typeof user.email==='string'&&user.email.length<=254&&!!user.email_confirmed_at;}
 export async function authIdentity(request,env,now,fetcher=fetch){
   if(!authEnabled(env)||!authConfigured(env))return null;
@@ -45,12 +45,15 @@ export async function authRoute(request,env,now,{fetcher=fetch}={}){
   }
   if(!authEnabled(env)||!authConfigured(env)||!origin(env))return json({ok:false,error:'Verified sign-in is not available yet.'},503);
   if(path==='/auth/callback'&&request.method==='GET'){
+    let stage='challenge';try{
     const flow=cookie(request,FLOW),code=u.searchParams.get('code');
     if(!hex.test(flow||'')||!code||code.length>2048)return failure();
     const row=await first(env,"DELETE FROM solborne_auth_challenges WHERE token_hash=? AND kind='google' AND expires_at>? RETURNING verifier",[await authHash(flow),now]);if(!row)return failure();
-    const result=await api(env,'token?grant_type=pkce',{method:'POST',body:{auth_code:code,code_verifier:row.verifier}},fetcher);if(!result.ok)return failure();
+    stage='exchange';const result=await api(env,'token?grant_type=pkce',{method:'POST',body:{auth_code:code,code_verifier:row.verifier}},fetcher);if(!result.ok)return failure();
+    stage='session';
     const response=await issue(request,env,now,await result.json(),fetcher);if(response.status!==200)return response;
     const h=new Headers(response.headers);h.set('Location','/canvas.html');h.delete('Content-Type');return new Response(null,{status:303,headers:h});
+    }catch(cause){console.error('SOLBORNE_AUTH_FAILURE',stage,String(cause?.name||'Error'));return failure(503);}
   }
   if(request.method!=='POST'||!sameOrigin(request,env))return failure();
   if(!request.headers.get('Content-Type')?.startsWith('application/json'))return failure(415);
