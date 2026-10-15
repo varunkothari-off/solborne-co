@@ -1,0 +1,11 @@
+# Solborne & Co.
+
+Solborne is a brand of KISNO PROPTY LLP, Kolkata, India. It helps businesses create a clear first website. The current free V1 is a responsive one-page website plus editable HTML source and README, after processing, private review and release. Hosting, domains, maintenance and additional services are separate. Automated AI delivery and seven-day preview expiry are not claimed as live.
+
+- [Offer and scope](https://solborne.in/offer.html)
+- [How it works](https://solborne.in/how-it-works.html)
+- [Real examples and illustrative concepts](https://solborne.in/websites.html)
+- [Company details and logo story](https://solborne.in/about.html)
+- [Contact](https://solborne.in/contact.html)
+- [Privacy](https://solborne.in/privacy.html)
+- [Terms](https://solborne.in/terms.html)

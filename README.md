@@ -1,3 +1,7 @@
+# Current production implementation
+
+The active solborne.in website and Cloudflare Worker are maintained in [cloudflare-site](cloudflare-site/README.md). The Astro application below is retained as the previous implementation.
+
 # Solborne & Co. — Marketing Site
 
 Static marketing site for Solborne & Co., an independent AI advisory.

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>The Walk of Fame — Solborne &amp; Co.</title>
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/tokens.css">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/bearing-theme.css">
+  <link rel="stylesheet" href="/registration.css">
+  <link rel="stylesheet" href="/walk.css">
+  <script type="module" src="/walk.js"></script>
+<link rel="stylesheet" href="/header.css"><script src="/header.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#walk-main">Skip to your Walk</a>
+<header class="header site-header wrap" data-site-header><a class="wordmark" href="/" aria-label="Solborne and Co. home"><svg class="bearing-mark" viewBox="0 0 58 66" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="29" cy="15" r="6.5" fill="var(--color-bearing)"></circle><line x1="29" y1="21.5" x2="29" y2="50" stroke="currentColor" stroke-width="2.2"></line><line x1="5" y1="50" x2="53" y2="50" stroke="currentColor" stroke-width="2.2"></line><line x1="6.1" y1="50" x2="6.1" y2="42" stroke="currentColor" stroke-width="2.2"></line><line x1="51.9" y1="50" x2="51.9" y2="42" stroke="currentColor" stroke-width="2.2"></line></svg><img class="brand-wordmark brand-wordmark-vector" src="/assets/solborne-wordmark.svg" width="164" height="28" alt="Solborne &amp; Co." decoding="sync" fetchpriority="high"></a><button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" hidden>Menu</button><nav id="main-nav" aria-label="Main navigation"><a href="/#approach">How it works</a><a href="/#canvas">The canvas</a><a href="/#questions">FAQs</a><a href="/walk/" class="nav-cta">Walk of Fame</a><a href="/versions.html">Your websites</a></nav></header>
+<main class="wrap walk" id="walk-main">
+  <nav class="journey-progress" aria-label="Walk of Fame progress">
+    <p id="walk-step-status" class="step-status">Checking your registration</p>
+    <ol>
+      <li id="walk-progress-1"><span class="step-number">01</span><span>Register</span></li>
+      <li id="walk-progress-2"><span class="step-number">02</span><span>Canvas open</span></li>
+      <li id="walk-progress-3"><span class="step-number">03</span><span>Story &amp; canvas</span></li>
+      <li id="walk-progress-4"><span class="step-number">04</span><span>Review facts</span></li>
+      <li id="walk-progress-5"><span class="step-number">05</span><span>Preview</span></li>
+      <li id="walk-progress-6"><span class="step-number">06</span><span>Request &amp; status</span></li>
+    </ol>
+  </nav>
+  <header class="walk-intro">
+    <div><p class="eyebrow">THE WALK OF FAME</p><h1>Your business.<br>In your own words.</h1><p class="walk-lede">Complete the Walk to submit your approved brief for a free V1 website: a one-page site and editable source files available after Solborne processing, private review and release.</p></div>
+    <aside class="scope-card"><p class="micro">YOUR FREE V1</p><p>Your introduction, services and chosen contact details in a responsive one-page website.</p><p class="micro">GOING LIVE IS SEPARATE</p><p>Domain, hosting, maintenance and additional work outside the website-copy editor are separate arrangements.</p></aside>
+  </header>
+  <ol class="walk-overview" aria-label="What you will do">
+    <li><strong>Tell your story</strong><span>Use five prompts to think through your business.</span></li>
+    <li><strong>Choose the website copy</strong><span>Enter the words and contact details you want public.</span></li>
+    <li><strong>Approve your website brief</strong><span>Submit it for Solborne processing. Check back here for file release.</span></li>
+  </ol>
+  <p class="working-note">Your brief comes to the Solborne team. We prepare the website and manually check its content, design and public details before releasing any files. You can return here to check its status.</p><div class="access-strip"><p id="walk-access" role="status">Checking your saved registration.</p><a id="walk-register-link" href="/start.html#registration-recovery">Recover registration or start your Walk</a><div id="walk-canvas-links" hidden><a href="/downloads/canvas.pdf">Canvas PDF</a><a href="/downloads/canvas.txt">Editable canvas</a></div></div>
+  <form id="walk-form" novalidate autocomplete="off">
+  <fieldset disabled id="walk-fields"><legend class="sr-only">Your Walk of Fame</legend>
+    <section id="walk-stage-3" class="walk-stage">
+      <div class="stage-heading"><div><p class="micro">03 / STORY &amp; CANVAS</p><h2 id="walk-heading-3" tabindex="-1">Start with what you know.</h2></div><output id="canvas-missing" class="provenance missing" aria-live="polite">Required details not filled yet</output></div>
+      <p>Share information you are comfortable making public. Do not include customer records, identity documents or confidential financial details. Story answers are processed on submission; only the website facts you approve are stored.</p>
+      <p class="working-note">Keep this page open while you work. Unfinished answers are not saved if you leave or reload it.</p>
+      <div class="walk-tabs" role="tablist" aria-label="Story and website canvas"><button type="button" role="tab" id="tab-questions" aria-controls="questions-panel" aria-selected="true">1. Your story</button><button type="button" role="tab" id="tab-canvas" aria-controls="canvas-panel" aria-selected="false" tabindex="-1">2. Website copy</button></div>
+      <div id="questions-panel" role="tabpanel" aria-labelledby="tab-questions">
+        <p class="topic-note">These prompts help you prepare. They do not automatically fill your website. Short answers are enough; use “already covered” when your first answer covers a follow-up.</p>
+        <section class="question-card"><p class="micro">QUESTION 01 / 05</p><h3>What do you do, and who is it for?</h3><label for="story0">Your business story <span class="field-required">Required</span></label><p class="field-hint" id="story0-hint">Describe the work, the people you serve and what led you here. Use your own words.</p><textarea id="story0" name="story0" maxlength="3000" aria-describedby="story0-hint story0-error" required></textarea><p id="story0-error" class="field-error" hidden></p></section>
+        <section class="question-card"><p class="micro">QUESTION 02 / 05</p><h3>What are you proud of in your work?</h3><label for="story1">Your approach <span class="field-required">Required or already covered</span></label><p class="field-hint" id="story1-hint">Describe something you do carefully or differently. Keep it specific and true.</p><textarea id="story1" name="story1" maxlength="3000" aria-describedby="story1-hint story1-error" required></textarea><p id="story1-error" class="field-error" hidden></p><button type="button" class="text-button" id="story1-covered">I already covered this in my story</button></section>
+        <section class="question-card"><p class="micro">QUESTION 03 / 05</p><h3>How does your work help a customer?</h3><label for="story2">Customer value <span class="field-required">Required or already covered</span></label><p class="field-hint" id="story2-hint">A real example helps. Leave private customer names out; do not invent a result.</p><textarea id="story2" name="story2" maxlength="3000" aria-describedby="story2-hint story2-error" required></textarea><p id="story2-error" class="field-error" hidden></p><button type="button" class="text-button" id="story2-covered">I already covered this in my story</button></section>
+        <section class="question-card"><p class="micro">QUESTION 04 / 05</p><h3>What can you share to support your story?</h3><label for="story3">Public proof and privacy <span class="field-required">Required or already covered</span></label><p class="field-hint" id="story3-hint">Mention public work samples or official links, and what should stay private. “No public proof yet” is a valid answer. These notes are not added to your website automatically.</p><textarea id="story3" name="story3" maxlength="3000" aria-describedby="story3-hint story3-error" required></textarea><p id="story3-error" class="field-error" hidden></p><button type="button" class="text-button" id="story3-covered">I already covered this in my story</button></section>
+        <section class="question-card"><p class="micro">QUESTION 05 / 05</p><h3>What should a visitor do next?</h3><label for="story4">The next step <span class="field-required">Required or already covered</span></label><p class="field-hint" id="story4-hint">Choose a useful action, such as asking about a service. You will enter its wording and public contact details in the next tab.</p><textarea id="story4" name="story4" maxlength="3000" aria-describedby="story4-hint story4-error" required></textarea><p id="story4-error" class="field-error" hidden></p><button type="button" class="text-button" id="story4-covered">I already covered this in my story</button></section>
+        <div class="stage-actions"><p class="action-note">Next: choose exactly what appears on your website.</p><button type="button" id="questions-continue" class="button primary">Continue to website copy</button></div>
+      </div>
+      <div id="canvas-panel" role="tabpanel" aria-labelledby="tab-canvas" hidden>
+        <div class="canvas-intro"><h3 id="canvas-heading" tabindex="-1">Write what visitors will see.</h3><p>The fields below become your website copy exactly as you enter them. Use your story as a reference, then write a clear introduction, audience and offer. Your private registration email is not automatically copied here.</p><button type="button" id="use-story" class="text-button">Copy my story into the introduction</button><p class="field-hint">This copies your first story answer unchanged. It replaces the introduction below; edit it before reviewing.</p></div>
+        <div class="canvas-grid">
+          <div class="canvas-field"><label for="businessName">Business name <span class="field-required">Required</span></label><p class="field-hint" id="businessName-hint">Appears in the page title, header and main heading.</p><input id="businessName" name="businessName" type="text" maxlength="120" aria-describedby="businessName-hint businessName-error" required><p id="businessName-error" class="field-error" hidden></p></div>
+          <div class="canvas-field wide"><label for="description">Business introduction <span class="field-required">Required</span></label><p class="field-hint" id="description-hint">Appears beneath your business name. Say what you do and why someone might need it.</p><textarea id="description" name="description" maxlength="3000" aria-describedby="description-hint description-error" required></textarea><p id="description-error" class="field-error" hidden></p></div>
+          <div class="canvas-field wide"><label for="audience">Who you work with <span class="field-required">Required</span></label><p class="field-hint" id="audience-hint">Appears in the “Who we work with” section. Describe your customers in plain language.</p><textarea id="audience" name="audience" maxlength="800" aria-describedby="audience-hint audience-error" required></textarea><p id="audience-error" class="field-error" hidden></p></div>
+          <div class="canvas-field wide"><label for="services">Your offer and services <span class="field-required">Required</span></label><p class="field-hint" id="services-hint">Appears as a list under “What we offer”. Put one service per line, with your priority offer first.</p><textarea id="services" name="services" maxlength="3000" aria-describedby="services-hint services-error" required></textarea><p id="services-error" class="field-error" hidden></p></div>
+          <div class="canvas-field"><label for="location">Where you work <span class="field-required">Optional</span></label><p class="field-hint" id="location-hint">City, region or service area. Leave blank to omit this section.</p><input id="location" name="location" type="text" maxlength="200" aria-describedby="location-hint location-error"><p id="location-error" class="field-error" hidden></p></div>
+          <div class="canvas-field"><label for="callToAction">What a visitor should do next <span class="field-required">Required</span></label><p class="field-hint" id="callToAction-hint">Button wording, such as “Ask about repairs”. It leads to the contact details you choose below.</p><input id="callToAction" name="callToAction" type="text" maxlength="120" aria-describedby="callToAction-hint callToAction-error" required><p id="callToAction-error" class="field-error" hidden></p></div>
+          <div class="canvas-contact-intro wide"><h3>Give visitors a way to reach you.</h3><p id="contact-hint">Add at least one public business email, phone or link. These appear on your website and can differ from your private registration details.</p><p id="contact-error" class="field-error" hidden></p></div>
+          <div class="canvas-field"><label for="email">Public business email <span class="field-required">Optional</span></label><input id="email" name="email" type="email" inputmode="email" maxlength="254" aria-describedby="contact-hint contact-error email-error"><p id="email-error" class="field-error" hidden></p></div>
+          <div class="canvas-field"><label for="phone">Public business phone <span class="field-required">Optional</span></label><p class="field-hint" id="phone-hint">Include the country code, for example +91.</p><input id="phone" name="phone" type="tel" inputmode="tel" maxlength="40" aria-describedby="phone-hint contact-hint contact-error phone-error"><p id="phone-error" class="field-error" hidden></p></div>
+          <div class="canvas-field wide"><label for="websiteUrl">Public business link <span class="field-required">Optional</span></label><p class="field-hint" id="websiteUrl-hint">A full https:// or http:// link to a public business page.</p><input id="websiteUrl" name="websiteUrl" type="url" inputmode="url" maxlength="500" aria-describedby="websiteUrl-hint contact-hint contact-error websiteUrl-error"><p id="websiteUrl-error" class="field-error" hidden></p></div>
+        </div>
+        <details class="planning-notes"><summary>Optional planning notes — excluded from your website</summary><p>These notes stay on this page. They are not sent to the server or included in your website.</p><label for="planning-materials">Public materials you have and content still missing</label><textarea id="planning-materials" name="planningMaterials" maxlength="2000"></textarea><label for="planning-owner">Who will respond to website enquiries? Keep private details here.</label><input id="planning-owner" name="planningOwner" maxlength="150"><label for="planning-goal">One useful outcome or measure, optional</label><textarea id="planning-goal" name="planningGoal" maxlength="1000"></textarea><p class="field-hint">A first-30-days goal can help you plan. It is not a promised result or delivery timeframe.</p></details>
+        <div class="stage-actions"><button type="button" id="canvas-back" class="text-button">Back to my story</button><button type="button" id="walk-review" class="button primary">Review my website copy</button></div>
+      </div>
+    </section>
+    <section id="walk-stage-4" class="walk-stage" hidden>
+      <p class="micro">04 / REVIEW FACTS</p><h2 id="walk-heading-4" tabindex="-1">Read it as your next customer.</h2><p>These are the words and contact details that will appear on your website. They come from you; no external research or verification has run. Check spelling, services and each public contact detail before previewing.</p>
+      <dl class="facts-grid">
+        <div class="review-fact"><dt>Business name</dt><dd id="fact-businessName"></dd><span class="provenance from-you" id="badge-businessName">From you</span></div>
+        <div class="review-fact"><dt>Business introduction</dt><dd id="fact-description"></dd><span class="provenance from-you" id="badge-description">From you</span></div>
+        <div class="review-fact"><dt>Who you work with</dt><dd id="fact-audience"></dd><span class="provenance from-you" id="badge-audience">From you</span></div>
+        <div class="review-fact"><dt>Your offer and services</dt><dd id="fact-services"></dd><span class="provenance from-you" id="badge-services">From you</span></div>
+        <div class="review-fact"><dt>Where you work</dt><dd id="fact-location"></dd><span class="provenance from-you" id="badge-location">From you</span></div>
+        <div class="review-fact"><dt>Visitor’s next step</dt><dd id="fact-callToAction"></dd><span class="provenance from-you" id="badge-callToAction">From you</span></div>
+        <div class="review-fact"><dt>Public business email</dt><dd id="fact-email"></dd><span class="provenance from-you" id="badge-email">From you</span></div>
+        <div class="review-fact"><dt>Public business phone</dt><dd id="fact-phone"></dd><span class="provenance from-you" id="badge-phone">From you</span></div>
+        <div class="review-fact"><dt>Public business link</dt><dd id="fact-websiteUrl"></dd><span class="provenance from-you" id="badge-websiteUrl">From you</span></div>
+      </dl>
+      <div class="privacy-callout">Your private registration details and planning notes are excluded. Story answers are not added separately. Only the website copy shown here, including any story text you chose to reuse, goes into your website.</div>
+      <div class="scope-review"><h3>Your free V1 includes</h3><p>A responsive one-page website with this introduction, audience, services, optional location and chosen contact links, plus editable source files. Hosting, domains, maintenance and additional work outside the website-copy editor are separate.</p></div>
+      <div class="stage-actions"><button type="button" id="review-edit" class="text-button">Edit my answers</button><button class="button primary" type="button" id="walk-preview">Preview my website</button></div>
+    </section>
+    <section id="walk-stage-5" class="walk-stage" hidden><div id="walk-preview-box" hidden>
+      <p class="micro">05 / DRAFT PREVIEW</p><h2 id="walk-heading-5" tabindex="-1">See how your words come together.</h2><p>This local draft shows the website copy you entered. It is not a delivered website or a released file. Scroll inside it to check your public facts and contact details before submitting your brief.</p>
+      <div class="preview-toolbar" role="group" aria-label="Preview width"><span>Check the layout</span><div><button type="button" id="preview-wide" aria-pressed="true">Wide screen</button><button type="button" id="preview-phone" aria-pressed="false">Phone</button></div></div>
+      <p class="field-hint" id="preview-width-note">Wide view fits the available space. Phone view shows a narrower layout.</p>
+      <div id="walk-preview-shell" class="preview-shell" data-view="wide"><iframe id="walk-preview-frame" title="Your V1 website preview" aria-describedby="preview-width-note" sandbox="" referrerpolicy="no-referrer"></iframe></div>
+      <label class="consent"><input type="checkbox" id="walk-approved"><span>I reviewed and approve these public website facts and contact details. Submit this brief for Solborne processing and private review; website files are available only after release. The free V1 includes the website build and editable source files. Hosting, domains, maintenance and additional work outside the website editor are separate.</span></label>
+      <div class="stage-actions"><button type="button" id="walk-edit" class="text-button">Edit my answers</button><button class="button primary" type="submit" id="walk-submit" disabled>Submit my website brief</button></div>
+    </div></section>
+  </fieldset>
+  </form>
+  <div class="walk-feedback"><p id="walk-message" role="status" aria-live="polite"></p><button type="button" id="walk-refresh" class="text-button" hidden>Refresh form connection</button></div>
+  <section id="walk-receipt" class="walk-stage" hidden tabindex="-1">
+    <p class="micro">06 / REQUEST &amp; STATUS</p><h2 id="walk-receipt-title">Your saved website request.</h2><p id="walk-request-state" class="provenance"></p><p id="walk-review-state"></p><p id="walk-receipt-note"></p><p id="walk-completion" class="receipt-code"></p>
+    <p><button id="walk-status-refresh" class="text-button" type="button">Refresh request status</button></p>
+    <div class="delivery-grid" id="walk-delivery-files" hidden>
+      <article class="delivery-card"><span class="provenance confirmed">Website + editable source</span><h3>1. Keep your website HTML.</h3><p><strong>index.html</strong> is your one-page website and its editable source in one file. Open it in a browser to view it locally, or in a text editor to change the code.</p><a class="button primary" id="walk-html">Download website HTML</a></article>
+      <article class="delivery-card"><span class="provenance confirmed">Handover notes</span><h3>2. Keep the README too.</h3><p><strong>README.txt</strong> explains the files, editing and the separate publishing step. It is a guide; the website itself is in index.html.</p><a class="button" id="walk-readme">Download source README</a></article>
+    </div>
+    <div class="handover-next" id="walk-handover-next" hidden><h3>3. Check your files on your device.</h3><ol><li>Keep index.html and README.txt together in a folder you control.</li><li>Open index.html in a browser. Read every section and test the contact links.</li><li>Use a text editor to make changes, then reopen the HTML to check them.</li></ol></div>
+    <div class="going-live"><p class="micro">GOING LIVE IS A SEPARATE STEP</p><p>Opening the file on your device does not publish it. A hosted website has not been published and no domain has been connected. Hosting, domain registration or renewal, maintenance and additional work outside the website-copy editor are separate arrangements.</p></div>
+    <p><a id="walk-versions" class="button" href="/versions.html">View this request and saved versions</a></p>
+    <p><a href="/downloads/canvas.pdf">Canvas PDF</a> · <a href="/downloads/canvas.txt">Editable canvas</a></p>
+  </section>
+  <noscript>JavaScript is required to review and complete this Walk. No answers are submitted with JavaScript off.</noscript>
+</main>
+<footer class="wrap walk-footer"><span>Solborne &amp; Co.</span><span>Your story. Your source files.</span><a href="mailto:varun@getsolborne.com">Questions about your saved details</a><div class="legal-disclosure"><p>© 2026 KISNO PROPTY LLP.</p><p>Solborne is a brand of KISNO PROPTY LLP.</p><p>LLPIN: ACK-0281<br>Registered office: 22 Kalakar Street, Kolkata, West Bengal 700007, India.<br>Registered in India with limited liability.</p></div></footer>
+</body>
+</html>

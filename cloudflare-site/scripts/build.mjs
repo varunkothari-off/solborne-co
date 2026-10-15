@@ -1,0 +1,11 @@
+import { readdir,readFile,writeFile,mkdir,rm,copyFile } from 'node:fs/promises';
+import { join,relative } from 'node:path';
+import { createHash } from 'node:crypto';
+const mime={html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',mp4:'video/mp4',jpg:'image/jpeg',svg:'image/svg+xml',woff2:'font/woff2',txt:'text/plain; charset=utf-8',pdf:'application/pdf',png:'image/png',xml:'application/xml; charset=utf-8'};
+const entries={};async function scan(dir){for(const entry of await readdir(dir,{withFileTypes:true})){const p=join(dir,entry.name);if(entry.isDirectory())await scan(p);else {const b=await readFile(p);const schemaHashes=p.endsWith('.html')?[...b.toString('utf8').matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m=>"'sha256-"+createHash('sha256').update(m[1]).digest('base64')+"'"):[];entries[relative('public',p).replaceAll('\\','/')]={body:b.toString('base64'),type:mime[p.split('.').at(-1)]||'application/octet-stream',etag:createHash('sha256').update(b).digest('hex').slice(0,24),schemaHashes};}}}
+await copyFile('src/website.mjs','public/website-renderer.js');
+await scan('public');await writeFile('src/assets.generated.mjs','export const assets = '+JSON.stringify(entries)+';\n');
+await rm('dist',{recursive:true,force:true});await mkdir('dist/server',{recursive:true});
+const privateEntries={};for(const name of ['canvas.pdf','canvas.txt']){const b=await readFile('private/'+name);privateEntries[name]={body:b.toString('base64'),type:name.endsWith('.pdf')?'application/pdf':'text/plain; charset=utf-8'};}await writeFile('src/private-assets.generated.mjs','export const privateAssets = '+JSON.stringify(privateEntries)+';\n');
+for(const name of ['worker.mjs','db.mjs','website.mjs','ai-walk.mjs','ai-portfolio.mjs','presales-sync.mjs','assets.generated.mjs','private-assets.generated.mjs'])await copyFile('src/'+name,'dist/server/'+(name==='worker.mjs'?'index.js':name));
+console.log(`Built Worker with ${Object.keys(entries).length} self-contained public assets`);
