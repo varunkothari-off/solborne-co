@@ -116,6 +116,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
       if(!await intakeReady(env))return error('The Walk is temporarily unavailable.',503,'registration_unavailable');
       const access=await accessFor(request,env,now);if(!access)return error('Save your basic details first.',403,'registration_required');
+      if(['/api/ai-walk/preview','/api/ai-walk/complete'].includes(path)&&env.AI_WEBSITE_BUILD_ENABLED!=='true')return error('Website preparation follows team research and design approval. This Walk saves your business brief only.',503,'manual_design_required');
       if(request.method==='GET'){
         const {row,state}=await loadDraft(env,access.registration_id);
         if(path==='/api/ai-walk/preview'){if(!state.review)return error('Run the reviews before opening a draft.',422,'review_required');return json({ok:true,html:renderAIPortfolio(state,templateCSS(state)),template:state.template});}

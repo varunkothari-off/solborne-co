@@ -7,5 +7,5 @@ await copyFile('src/website.mjs','public/website-renderer.js');
 await scan('public');await writeFile('src/assets.generated.mjs','export const assets = '+JSON.stringify(entries)+';\n');
 await rm('dist',{recursive:true,force:true});await mkdir('dist/server',{recursive:true});
 const privateEntries={};for(const name of ['canvas.pdf','canvas.txt']){const b=await readFile('private/'+name);privateEntries[name]={body:b.toString('base64'),type:name.endsWith('.pdf')?'application/pdf':'text/plain; charset=utf-8'};}await writeFile('src/private-assets.generated.mjs','export const privateAssets = '+JSON.stringify(privateEntries)+';\n');
-for(const name of ['worker.mjs','db.mjs','website.mjs','ai-walk.mjs','ai-portfolio.mjs','presales-sync.mjs','assets.generated.mjs','private-assets.generated.mjs'])await copyFile('src/'+name,'dist/server/'+(name==='worker.mjs'?'index.js':name));
+for(const name of ['worker.mjs','db.mjs','website.mjs','ai-walk.mjs','walk-meta-prompt.mjs','ai-portfolio.mjs','presales-sync.mjs','assets.generated.mjs','private-assets.generated.mjs'])await copyFile('src/'+name,'dist/server/'+(name==='worker.mjs'?'index.js':name));
 console.log(`Built Worker with ${Object.keys(entries).length} self-contained public assets`);
