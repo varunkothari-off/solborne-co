@@ -1,3 +1,4 @@
+import { authRoute, authEnabled, authIdentity } from './canvas-auth.mjs';
 import {flushPresales} from './presales-sync.mjs';
 import { database, first, all, run, rateLimit, cleanup } from './db.mjs';
 import { privateAssets } from './private-assets.generated.mjs';
@@ -69,10 +70,13 @@ async function createSession(request,env,now) {
   const csrf=token();await run(env,'INSERT INTO solborne_form_sessions (token_hash,created_at,expires_at) VALUES (?,?,?)',[await digest(csrf),now,now+3600000]);
   return json({ok:true,csrf},200,{'Set-Cookie':`${COOKIE}=${csrf}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=3600`});
 }
-async function register(request,env,now) {
+async function register(request,env,now,authFetch=fetch) {
+  const identity=authEnabled(env)?await authIdentity(request,env,now,authFetch):null;
+  if(authEnabled(env)&&!identity)return error('Sign in with a verified email before sending an enquiry.',401,'signin_required');
   if(!validOrigin(request,env))return error('Open the registration page directly and try again.',403,'origin_required');
   if(!await intakeReady(env))return error('Registration is temporarily unavailable.',503,'registration_unavailable');
   const input=await readJson(request);const data=validate(input);
+  if(data&&identity&&data.contact!==identity.email)return error('Use your verified sign-in email.',403,'identity_mismatch');
   if(!data)return error('Check your name, email, enquiry type, and permission to respond.',422,'validation_failed');
   if(input.expectedReceipt!==undefined&&(typeof input.expectedReceipt!=='string'||!REGISTRATION_ID.test(input.expectedReceipt)))return error('This recovery reference could not be read.',422,'validation_failed');
   const sessionCookie=cookie(request);
@@ -85,16 +89,19 @@ async function register(request,env,now) {
   // Recovery files restore an exact existing enquiry; they cannot create a new one.
   // expectedReceipt stays out of the normalized details and idempotency payload hash.
   if(input.expectedReceipt!==undefined&&(!existing||existing.id!==input.expectedReceipt))return error('We could not match this recovery file to a saved enquiry.',404,'recovery_not_found');
-  if(existing)return existing.payload_hash===payloadHash?await authorizedReceipt(request,env,existing,now,true):error('This attempt was already used for different details. Start a new enquiry.',409,'idempotency_conflict');
+  if(existing&&identity){const owned=await first(env,'SELECT registration_id FROM solborne_auth_registrations WHERE user_id=? AND registration_id=?',[identity.id,existing.id]);if(!owned)return error('This saved enquiry belongs to a different sign-in.',403,'identity_mismatch');await run(env,'UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=? AND user_id=?',[existing.id,identity.sessionHash,identity.id]);}
+  if(existing)return existing.payload_hash===payloadHash?await authorizedReceipt(request,env,existing,now,true,authFetch):error('This attempt was already used for different details. Start a new enquiry.',409,'idempotency_conflict');
   if(!await rateLimit(env,'submit:'+await ipKey(request,now),now,900000,5))return error('Too many enquiries were submitted from this connection. Please try again later.',429,'rate_limited',{'Retry-After':'900'});
   const id='SB-'+crypto.randomUUID();
   try{
     // Keep the readiness condition in the insert too, in case configuration changes mid-request.
-    const saved=await run(env,"INSERT INTO solborne_registrations (id,idempotency_key,payload_hash,name,contact,enquiry_type,permission_to_respond,consent_version,created_at) SELECT ?,?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM solborne_intake_control WHERE id=1 AND enabled=1 AND policy_version=?)",[id,key,payloadHash,data.name,data.contact,data.enquiryType,1,CONSENT_VERSION,now,CONSENT_VERSION]);
+    const insertSQL="INSERT INTO solborne_registrations (id,idempotency_key,payload_hash,name,contact,enquiry_type,permission_to_respond,consent_version,created_at) SELECT ?,?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM solborne_intake_control WHERE id=1 AND enabled=1 AND policy_version=?)";
+    const values=[id,key,payloadHash,data.name,data.contact,data.enquiryType,1,CONSENT_VERSION,now,CONSENT_VERSION];
+    const saved=identity?(await database(env).batch([database(env).prepare(insertSQL).bind(...values),database(env).prepare("INSERT INTO solborne_auth_registrations(user_id,registration_id,created_at) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM solborne_registrations WHERE id=?)").bind(identity.id,id,now,id),database(env).prepare("UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=? AND user_id=? AND EXISTS(SELECT 1 FROM solborne_auth_registrations WHERE user_id=? AND registration_id=?)").bind(id,identity.sessionHash,identity.id,identity.id,id)]))[0]:await run(env,insertSQL,values);
     if(!(saved.meta?.changes>=1))return error('Registration is temporarily unavailable. Please try again later.',503,'registration_unavailable');
   }
-  catch(cause){const raced=await first(env,'SELECT id,payload_hash,created_at FROM solborne_registrations WHERE idempotency_key=?',[key]);if(raced)return raced.payload_hash===payloadHash?await authorizedReceipt(request,env,raced,now,true):error('This attempt was already used for different details.',409,'idempotency_conflict');throw cause;}
-  return await authorizedReceipt(request,env,{id,created_at:now},now);
+  catch(cause){const raced=await first(env,'SELECT id,payload_hash,created_at FROM solborne_registrations WHERE idempotency_key=?',[key]);if(raced){if(identity){const linked=await first(env,'SELECT registration_id FROM solborne_auth_registrations WHERE user_id=? AND registration_id=?',[identity.id,raced.id]);if(!linked)return error('This saved enquiry belongs to a different sign-in.',403,'identity_mismatch');await run(env,'UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=? AND user_id=?',[raced.id,identity.sessionHash,identity.id]);}return raced.payload_hash===payloadHash?await authorizedReceipt(request,env,raced,now,true,authFetch):error('This attempt was already used for different details.',409,'idempotency_conflict');}throw cause;}
+  return await authorizedReceipt(request,env,{id,created_at:now},now,false,authFetch);
 }
 async function serveAsset(request,path) {
   const key=path==='/'?'index.html':(path==='/walk'||path==='/walk/'?'walk.html':path==='/studio'||path==='/studio/'?'studio/index.html':path==='/studio-motion'||path==='/studio-motion/'?'studio-motion/index.html':path.replace(/^\//,''));const entry=assets[key];if(!entry)return error('This page was not found.',404,'not_found');
@@ -108,9 +115,10 @@ async function serveAsset(request,path) {
   if(entry.type.startsWith('video/')){headers['Accept-Ranges']='bytes';const range=request.headers.get('Range');if(range){const match=range.match(/^bytes=(\d*)-(\d*)$/);let start=0,end=bytes.length-1;if(!match||(!match[1]&&!match[2]))return new Response(null,{status:416,headers:{...headers,'Content-Range':`bytes */${bytes.length}`}});if(!match[1])start=Math.max(0,bytes.length-Number(match[2]));else{start=Number(match[1]);if(match[2])end=Math.min(end,Number(match[2]));}if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>end||start>=bytes.length)return new Response(null,{status:416,headers:{...headers,'Content-Range':`bytes */${bytes.length}`}});headers['Content-Range']=`bytes ${start}-${end}/${bytes.length}`;headers['Content-Length']=String(end-start+1);return new Response(request.method==='HEAD'?null:bytes.slice(start,end+1),{status:206,headers});}headers['Content-Length']=String(bytes.length);}
   return new Response(request.method==='HEAD'?null:bytes,{headers});
 }
-export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch}={}) {
+export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch,authFetch=fetch}={}) {
   const now=clock(),url=new URL(request.url),path=url.pathname;
   try {
+    const authResponse=await authRoute(request,env,now,{fetcher:authFetch});if(authResponse)return authResponse;
     if(['GET','HEAD'].includes(request.method)&&['/index.html','/improve.html'].includes(path))return new Response(null,{status:301,headers:{...safeHeaders,Location:(path==='/index.html'?'/':'/websites.html')+url.search,'Cache-Control':'no-cache'}});
     if(path==='/api/ai-walk/status'&&request.method==='GET')return json({ok:true,enabled:providerReady(env)});
     if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
@@ -137,13 +145,13 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
       const result=await answerDraft(env,access.registration_id,input,now,{fetcher:modelFetch});return json(result.body,result.status);
     }
     if(path==='/api/registration-session'&&request.method==='GET')return await createSession(request,env,now);
-    if(path==='/api/registrations'&&request.method==='POST')return await register(request,env,now);
+    if(path==='/api/registrations'&&request.method==='POST')return await register(request,env,now,authFetch);
     if(path==='/admin'||path.startsWith('/admin/')||path.startsWith('/api/admin/')||path==='/signin-with-chatgpt'||path==='/signout-with-chatgpt')return error('This page was not found.',404,'not_found');
     if(path==='/api/access/status'&&request.method==='GET'){const access=await accessFor(request,env,now);return access?json({ok:true,registered:true}):error('Save your basic details first.',403,'registration_required');}
     if(path==='/api/walk/complete'&&request.method==='POST')return await completeWalk(request,env,now);
     if(path==='/api/walk/revisions'&&request.method==='POST')return await reviseWebsite(request,env,now);
     if((path==='/api/walk/versions'||path.startsWith('/api/walk/versions/'))&&request.method==='GET')return await websiteVersions(request,env,now);
-    if(path.startsWith('/downloads/')&&(request.method==='GET'||request.method==='HEAD'))return await download(request,env,now);
+    if(path.startsWith('/downloads/')&&(request.method==='GET'||request.method==='HEAD'))return await download(request,env,now,authFetch);
     if(path.startsWith('/api/'))return error('This operation is not supported.',405,'method_not_allowed');
     if(request.method!=='GET'&&request.method!=='HEAD')return error('This operation is not supported.',405,'method_not_allowed',{'Allow':'GET, HEAD'});
     return await serveAsset(request,path);
@@ -170,15 +178,16 @@ export default { async fetch(request,env,ctx){const response=await handleRequest
 
 async function intakeReady(env){const row=await first(env,'SELECT enabled,policy_version FROM solborne_intake_control WHERE id=1');return row?.enabled===1&&row.policy_version===CONSENT_VERSION;}
 function cookieNamed(request,name){return request.headers.get('Cookie')?.split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1)||'';}
-async function authorizedReceipt(request,env,row,now,replayed=false){
-  const current=await accessFor(request,env,now);
+async function authorizedReceipt(request,env,row,now,replayed=false,authFetch=fetch){
+  const current=await accessFor(request,env,now,authFetch);
   if(current?.registration_id===row.id)return receipt(row,replayed);
   if(!await rateLimit(env,'grant:'+row.id,now,900000,10)||!await rateLimit(env,'grant-connection:'+await ipKey(request,now),now,900000,30))return error('Your details are saved, but too many access refreshes were requested. Please try again later.',429,'rate_limited',{'Retry-After':'900'});
   const opaque=token();
   await run(env,'INSERT INTO solborne_access_grants (token_hash,registration_id,expires_at) VALUES (?,?,?)',[await digest(opaque),row.id,now+86400000]);
   return receipt(row,replayed,{'Set-Cookie':`__Host-solborne_access=${opaque}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=86400`});
 }
-async function accessFor(request,env,now){
+async function accessFor(request,env,now,authFetch=fetch){
+  if(authEnabled(env)){const user=await authIdentity(request,env,now,authFetch);return user?.registration_id?{registration_id:user.registration_id}:null;}
   const opaque=cookieNamed(request,'__Host-solborne_access');if(!/^[a-f0-9]{64}$/.test(opaque))return null;
   return await first(env,'SELECT g.registration_id FROM solborne_access_grants g JOIN solborne_registrations r ON r.id=g.registration_id WHERE g.token_hash=? AND g.expires_at>?',[await digest(opaque),now]);
 }
@@ -295,12 +304,14 @@ async function reviseWebsite(request,env,now){
 }
 function revisionConflict(){return error('A newer version already exists. Open and review the latest version before revising.',409,'revision_conflict');}
 function deliveryPending(){return error("This version's files are awaiting release.",423,'delivery_pending');}
-async function download(request,env,now){
+async function download(request,env,now,authFetch=fetch){
   const path=new URL(request.url).pathname;
   const allowed=new Set(['/downloads/canvas.pdf','/downloads/canvas.txt','/downloads/website/index.html','/downloads/website/README.txt']);
   const versioned=path.match(/^\/downloads\/website\/(SW-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\/(index\.html|README\.txt)$/);
   if(!allowed.has(path)&&!versioned)return error('This file was not found.',404,'not_found');
-  const access=await accessFor(request,env,now);if(!access)return error('Save your basic details before downloading.',403,'registration_required');
+  const canvas=path.startsWith('/downloads/canvas.');
+  const identity=canvas&&authEnabled(env)?await authIdentity(request,env,now,authFetch):null;
+  const access=identity?{registration_id:identity.registration_id}:await accessFor(request,env,now,authFetch);if(!access)return error('Sign in before downloading.',403,'registration_required');
   let body,type,name;
   if(path.startsWith('/downloads/canvas.')){
     name=path.endsWith('.pdf')?'canvas.pdf':'canvas.txt';const file=privateAssets[name];
