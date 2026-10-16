@@ -5,6 +5,7 @@
 .header .nav-status{position:absolute;top:100%;right:24px;background:var(--paper);font-size:13px;max-width:28ch}
 .header .nav-status:empty{display:none}
 .header nav{gap:22px}.header .brand img{object-fit:contain}
+.header nav>.button[aria-current=page]:after{display:none}
 .account-page{min-height:100svh;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font-family:Public,Arial,sans-serif}
 .account-page .account-main{width:min(760px,calc(100% - 48px));max-width:none;margin:0 auto;padding:64px 0 80px;flex:1}
 .account-page .eyebrow{margin:0 0 20px;color:var(--accent);font-size:14px}
