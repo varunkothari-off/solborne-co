@@ -1,0 +1,28 @@
+/* Shared brand and account navigation, across public and private journeys. */
+[hidden]{display:none!important}
+.header .nav-signout{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:100px;font:inherit;font-size:14px;font-weight:500;min-height:44px;padding:9px 18px;margin:0;white-space:nowrap}
+.header .nav-signout:disabled{opacity:.65;cursor:wait}
+.header .nav-status{position:absolute;top:100%;right:24px;background:var(--paper);font-size:13px;max-width:28ch}
+.header .nav-status:empty{display:none}
+.header nav{gap:22px}.header .brand img{object-fit:contain}
+.account-page{min-height:100svh;display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font-family:Public,Arial,sans-serif}
+.account-page .account-main{width:min(760px,calc(100% - 48px));max-width:none;margin:0 auto;padding:64px 0 80px;flex:1}
+.account-page .eyebrow{margin:0 0 20px;color:var(--accent);font-size:14px}
+.account-page h1{font-family:Public,Arial,sans-serif;font-weight:500;font-size:clamp(40px,6vw,64px);letter-spacing:-.05em;line-height:1.08;margin:0 0 26px}
+.account-page h2{font-size:clamp(27px,4vw,36px);font-weight:500;letter-spacing:-.035em;line-height:1.2;margin:0 0 20px}
+.account-page p{max-width:60ch}.account-page #status{font-size:14px;color:var(--muted);overflow-wrap:anywhere;margin:0 0 30px}
+.account-page .actions{margin:28px 0 12px;gap:22px}.account-page .actions>a:not(.button){font-size:15px}
+.account-page hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+.account-page .scope-note{font-size:13px;line-height:1.7;color:var(--muted);margin:16px 0 24px}
+.account-page .another-business{font-size:14px;margin:24px 0 32px}.account-page .another-business a{color:#66716c;text-decoration-color:#adb6b0}
+.account-page .account-main .small{font-size:13px;color:var(--muted);margin-top:28px}
+.account-page #saved{border-top:1px solid var(--line);padding-top:30px;margin-top:32px}.account-page #saved h2{font-size:22px}
+.account-page #saved-list{padding-left:0;list-style:none}.account-page #saved-list button{font-size:14px;text-align:left;white-space:normal;overflow-wrap:anywhere}
+.account-footer{width:min(1280px,calc(100% - 112px));margin:0 auto;border-top:1px solid var(--line);padding:28px 0 36px;display:flex;align-items:center;justify-content:space-between;gap:28px}
+.account-footer nav{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:13px}.account-footer a{color:var(--muted)}
+.workspace-page{font-family:Public,Arial,sans-serif;background:var(--paper);color:var(--ink)}
+.workspace-page>.header{width:100%;max-width:none;margin:0;box-sizing:border-box}.workspace-page .account-footer{margin-top:56px}
+.workspace-page main h1{font-family:Public,Arial,sans-serif;letter-spacing:-.05em;line-height:1.1}
+@media(hover:hover){.header .nav-signout:hover{border-color:var(--ink)}.another-business a:hover{color:var(--ink)}.account-footer a:hover{text-decoration:underline}}
+@media(max-width:1040px){.header nav{gap:16px}}
+@media(max-width:700px){.account-page .account-main{padding:40px 0 52px}.account-footer{width:calc(100% - 48px);align-items:flex-start;flex-direction:column;padding-bottom:max(28px,env(safe-area-inset-bottom))}.account-page .actions{align-items:flex-start;gap:12px;flex-direction:column}.account-page .actions .button{max-width:100%}.account-page h1{font-size:42px}.account-page .scope-note{max-width:48ch}.header .nav-signout{margin-top:4px}}

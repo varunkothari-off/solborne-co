@@ -1,5 +1,14 @@
 import {createWebsiteFiles,validateWebsiteInterview,websiteFields} from '/website-renderer.js';
 const $=id=>document.getElementById(id);
+let accountRecovery=null;
+const accountRecoveryReady=typeof window!=='undefined'&&typeof window.solborneSession==='function'
+  ? Promise.resolve().then(()=>window.solborneSession()).then(session=>{
+      accountRecovery=session;
+      if(session?.enabled){const link=$('walk-register-link');link.href=session.authenticated?'/canvas.html':'/signin.html';link.textContent=session.authenticated?'Choose your saved business brief':'Sign in to reopen your saved brief';}
+    }).catch(()=>{ /* Keep the existing recovery available if account status cannot be checked. */ })
+  : Promise.resolve();
+function recoveryCopy(legacy){return accountRecovery?.enabled?'Sign in with the same Google account, then choose your saved business brief from Your canvas. Keep any files already downloaded.':legacy;}
+
 const form=$('walk-form'),fields=$('walk-fields'),message=$('walk-message'),previewBox=$('walk-preview-box'),frame=$('walk-preview-frame'),approval=$('walk-approved'),submit=$('walk-submit'),refresh=$('walk-refresh');
 const stageNames=['Register','Canvas open','Story & canvas','Review facts','Draft preview','Request & status'];
 const fieldLabels={businessName:'your business name',description:'your business introduction',audience:'who you work with',services:'your offer and services',callToAction:'the next step for visitors',location:'where you work',email:'your public business email',phone:'your public business phone',websiteUrl:'your public business link',contact:'a public contact option'};
@@ -96,7 +105,7 @@ async function restoreReceipt(completion,generation){
     const response=await fetch('/api/walk/versions/'+completion,{credentials:'same-origin',cache:'no-store',redirect:'error'}),data=await response.json();
     if(generation!==prepareGeneration)return 'stale';
     if(response.ok&&data.ok&&data.version?.completion===completion){showReceipt(data.version);return 'restored';}
-    if(response.status===403){$('walk-register-link').hidden=false;$('walk-receipt').hidden=true;for(const id of ['walk-html','walk-readme'])$(id).removeAttribute('href');say('Registration access has expired. Recover your saved registration, then refresh this request.',true);refresh.hidden=false;return 'retry';}
+    if(response.status===403){await accountRecoveryReady;$('walk-register-link').hidden=false;$('walk-receipt').hidden=true;for(const id of ['walk-html','walk-readme'])$(id).removeAttribute('href');say(recoveryCopy('Registration access has expired. Recover your saved registration, then refresh this request.'),true);refresh.hidden=false;return 'retry';}
     if(response.status===404){forgetCompletion();return 'denied';}
   }catch{if(generation!==prepareGeneration)return 'stale';}
   $('walk-access').textContent='Your saved request status could not be checked yet.';
@@ -106,7 +115,7 @@ async function prepare(){
   if(busy)return;const generation=++prepareGeneration;fields.disabled=true;refresh.hidden=true;
   try{
     const check=await fetch('/api/access/status',{credentials:'same-origin',cache:'no-store'});if(generation!==prepareGeneration)return;
-    if(check.status===403){form.hidden=false;$('walk-receipt').hidden=true;for(const id of ['walk-html','walk-readme'])$(id).removeAttribute('href');setStage(1);throw new Error('Registration access is unavailable. Recover your saved registration using its receipt, or save basic details for a new Walk.');}
+    if(check.status===403){await accountRecoveryReady;form.hidden=false;$('walk-receipt').hidden=true;for(const id of ['walk-html','walk-readme'])$(id).removeAttribute('href');setStage(1);throw new Error(recoveryCopy('Registration access is unavailable. Recover your saved registration using its receipt, or save basic details for a new Walk.'));}
     if(!check.ok)throw new Error('Registration access could not be checked. Please retry.');
     let previousUnavailable=false;
     const completion=completionInHistory();
@@ -158,7 +167,7 @@ form.addEventListener('submit',async e=>{
   const payload={csrf,idempotencyKey,answers:Array.from({length:5},(_,i)=>form.elements['story'+i].value),facts:validated.value,ownerApproved:true};
   try{
     const r=await fetch('/api/walk/complete',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),data=await r.json();
-    if(!r.ok||!data.ok){if(data.code==='session_expired')refresh.hidden=false;throw new Error(data.error||'Your completion could not be confirmed.');}
+    if(!r.ok||!data.ok){if(data.code==='session_expired')refresh.hidden=false;if(data.code==='registration_required'){await accountRecoveryReady;$('walk-register-link').hidden=false;throw new Error(recoveryCopy(data.error||'Your registration access needs to be restored.'));}throw new Error(data.error||'Your completion could not be confirmed.');}
     const receipt=requestStatus(data);
     try{history.replaceState({solborneWalkCompletion:receipt.completion},'');}catch{}
     showReceipt(receipt);
