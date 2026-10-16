@@ -240,7 +240,7 @@ test('actual Walk page retries identical facts after a lost response without dup
   assert.equal(f.db.sql.prepare('SELECT count(*) n FROM solborne_walk_completions').get().n, 1);
   assert.equal(f.element('walk-receipt').hidden, false);
   assert.equal(f.element('walk-html').href,undefined);assert.equal(f.element('walk-delivery-files').hidden,true);
-  assert.match(f.element('walk-request-state').textContent,/Pending Solborne processing/);
+  assert.match(f.element('walk-request-state').textContent,/With our team/);
   assert.equal(f.db.sql.prepare('SELECT count(*) n FROM solborne_website_artifacts').get().n,1);
   assert.equal(f.db.sql.prepare('SELECT count(*) n FROM solborne_owner_reviews').get().n,1);
 });
@@ -412,7 +412,7 @@ test('reload restores the exact pending receipt only after owned metadata passes
   assert.equal(f.form.hidden,true);assert.equal(f.element('walk-receipt').hidden,false);
   assert.match(f.element('walk-step-status').textContent,/Step 6 of 6/);
   assert.equal(f.element('walk-html').href,undefined);assert.equal(f.element('walk-readme').href,undefined);
-  assert.equal(f.element('walk-delivery-files').hidden,true);assert.match(f.element('walk-review-state').textContent,/Awaiting Solborne review/);
+  assert.equal(f.element('walk-delivery-files').hidden,true);assert.match(f.element('walk-review-state').textContent,/Waiting for review/);
   assert.equal(f.completions.length,2);assert.equal(f.db.sql.prepare('SELECT count(*) n FROM solborne_walk_completions').get().n,1);
 });
 
@@ -430,7 +430,7 @@ test('reviewed pending metadata is not a release; manual refresh exposes files o
   const id=f.history.state.solborneWalkCompletion;
   f.db.sql.prepare("UPDATE solborne_owner_reviews SET status='reviewed' WHERE completion_id=?").run(id);
   await f.element('walk-status-refresh').fire('click');
-  assert.match(f.element('walk-review-state').textContent,/Review complete; awaiting file release/);
+  assert.match(f.element('walk-review-state').textContent,/Reviewed\. Awaiting release\./);
   assert.equal(f.element('walk-html').href,undefined);assert.equal(f.element('walk-delivery-files').hidden,true);
   assert.equal((await f.request(`/downloads/website/${id}/index.html`)).status,423);
   f.release(id);await f.element('walk-status-refresh').fire('click');

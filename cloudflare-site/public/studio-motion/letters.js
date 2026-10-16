@@ -86,8 +86,6 @@ if (board) {
       if(!dirs[e.key])return;e.preventDefault();const [x,y]=dirs[e.key];s.vx=x*130;s.vy=y*100;run();
     });
   });
-  const instructions=board.querySelector('#shape-instructions');
-  if(instructions?.firstChild)instructions.firstChild.textContent='Drag the INDIA shapes anywhere. Throw them off-screen. They always find their way home. ';
   board.querySelector('.letter-help').hidden=false;
   board.querySelector('[data-reset-shapes]').addEventListener('click',reset);
   addEventListener('resize',reset);reduced.addEventListener('change',reset);
