@@ -30,6 +30,8 @@
 
 /* Orientation first; existing brand, motion and illustration stay in place. */
 .offer-intro{font-size:18px;line-height:1.65;color:var(--muted);max-width:58ch;margin:20px 0 0}
+#next-steps{scroll-margin-top:0;padding-top:64px}
+.enquiry-page #register{scroll-margin-top:0}
 .next-step-grid{align-items:stretch}.next-step-grid article{display:flex;flex-direction:column;align-items:flex-start}
 .next-step-grid article>p{flex:1}.next-step-grid article>.button,.next-step-grid article>.text-link{margin-top:8px}
 .next-step-grid article>.text-link{min-height:52px;display:inline-flex;align-items:center}
