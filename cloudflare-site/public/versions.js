@@ -1,5 +1,14 @@
 import {createWebsiteFiles,validateWebsiteInterview,websiteFields} from '/website-renderer.js';
 const $=id=>document.getElementById(id);
+let accountRecovery=null;
+const accountRecoveryReady=typeof window!=='undefined'&&typeof window.solborneSession==='function'
+  ? Promise.resolve().then(()=>window.solborneSession()).then(session=>{
+      accountRecovery=session;
+      if(session?.enabled){const link=$('versions-register');link.href=session.authenticated?'/canvas.html':'/signin.html';link.textContent=session.authenticated?'Choose your saved business brief':'Sign in to reopen your saved brief';}
+    }).catch(()=>{ /* Keep the existing recovery available if account status cannot be checked. */ })
+  : Promise.resolve();
+function recoveryCopy(legacy){return accountRecovery?.enabled?'Sign in with the same Google account, then choose your saved business brief from Your canvas. Keep any files already downloaded.':legacy;}
+
 const form=$('versions-form'),fields=$('versions-fields'),select=$('versions-select'),approval=$('versions-approved');
 const completionPattern=/^SW-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const labels={businessName:'Business name',description:'Business introduction',audience:'Who you work with',services:'Your offer and services',location:'Where you work',callToAction:'Visitor next step',email:'Public business email',phone:'Public business phone',websiteUrl:'Public business link',contact:'Public contact option'};
@@ -53,7 +62,7 @@ function width(kind,view){
   $(shell).setAttribute('data-view',view);for(const name of ['wide','phone'])$(prefix+name).setAttribute('aria-pressed',String(view===name));
 }
 function links(htmlId,readmeId,completion){$(htmlId).href=`/downloads/website/${completion}/index.html`;$(readmeId).href=`/downloads/website/${completion}/README.txt`;}
-function accessLost(){ownershipLost=true;csrf='';$('versions-register').hidden=false;$('versions-refresh-session').hidden=true;}
+async function accessLost(){await accountRecoveryReady;ownershipLost=true;csrf='';$('versions-register').hidden=false;$('versions-refresh-session').hidden=true;}
 function fillPicker(){
   select.replaceChildren();const groups=new Map();
   for(const version of versions){if(!groups.has(version.project))groups.set(version.project,[]);groups.get(version.project).push(version);}
@@ -68,7 +77,7 @@ function fillPicker(){
 }
 async function jsonRead(path){
   const response=await fetch(path,{credentials:'same-origin',cache:'no-store',redirect:'error'}),data=await response.json();
-  if(!response.ok||!data.ok){if(response.status===403)accessLost();throw new Error(response.status===403?'This browser no longer has access to these saved versions. Use your private registration retry receipt and re-enter the original details to recover access. Keep any files already downloaded.':data.error||'Saved versions are temporarily unavailable.');}
+  if(!response.ok||!data.ok){if(response.status===403)await accessLost();throw new Error(response.status===403?recoveryCopy('This browser no longer has access to these saved versions. Use your private registration retry receipt and re-enter the original details to recover access. Keep any files already downloaded.'):data.error||'Saved versions are temporarily unavailable.');}
   return data;
 }
 async function openVersion(completion){
@@ -81,7 +90,7 @@ async function openVersion(completion){
     const released=meta.deliveryState==='released';let html='';
     if(released){
       const file=await fetch(meta.downloads[0],{credentials:'same-origin',cache:'no-store',redirect:'error'});if(generation!==readGeneration)return;
-      if(file.status===403){accessLost();throw new Error('This browser no longer has access to the selected saved files. Recover your saved registration, then refresh. Keep any files already downloaded.');}
+      if(file.status===403){await accessLost();throw new Error(recoveryCopy('This browser no longer has access to the selected saved files. Recover your saved registration, then refresh. Keep any files already downloaded.'));}
       if(file.status!==200||!file.headers.get('content-type')?.startsWith('text/html'))throw new Error('The selected released website preview could not be loaded.');
       html=await file.text();if(generation!==readGeneration)return;
     }
@@ -159,7 +168,7 @@ function requestNavigation(action){
 }
 async function connectEditing(){
   const access=await fetch('/api/access/status',{credentials:'same-origin',cache:'no-store',redirect:'error'});
-  if(access.status===403){accessLost();const error=new Error('This browser no longer has registration access to revise the saved website. Keep any files already downloaded; recover your original registration with its private retry receipt and original details before returning here.');error.code='registration_required';throw error;}
+  if(access.status===403){await accessLost();const error=new Error(recoveryCopy('This browser no longer has registration access to revise the saved website. Keep any files already downloaded; recover your original registration with its private retry receipt and original details before returning here.'));error.code='registration_required';throw error;}
   if(access.status!==200)throw new Error('Registration access could not be checked right now.');
   const response=await fetch('/api/registration-session',{credentials:'same-origin',cache:'no-store',redirect:'error'}),data=await response.json();
   if(!response.ok||!data.ok||typeof data.csrf!=='string')throw new Error(data.error||'Editing is unavailable right now.');
@@ -210,7 +219,7 @@ async function sendAttempt(attempt){
     const response=await fetch('/api/walk/revisions',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(attempt)}),data=await response.json();
     if(response.ok&&data.ok){showSaved(data);return;}
     if(response.status>=500||response.status===429){setMode('pending');say((data.error||'The save could not be confirmed.')+' Retry the same save before editing or selecting another version. Any earlier released files remain separate.',true);return;}
-    if(data.code==='registration_required'){accessLost();if(resolving){setMode('pending');say('The earlier save result is still uncertain, and this browser no longer has registration access to confirm it. Reconnecting the editing form cannot restore ownership. Keep any files already downloaded.',true);return;}}
+    if(data.code==='registration_required'){await accessLost();if(resolving){setMode('pending');say('The earlier save result is still uncertain, and this browser no longer has registration access to confirm it. Reconnecting the editing form cannot restore ownership. Keep any files already downloaded.',true);return;}}
     if(resolving&&!(response.status===409&&data.code==='revision_conflict')){
       if(data.code==='session_expired'){$('versions-refresh-session').hidden=false;csrf='';}
       setMode('pending');say((data.error||'The earlier save result is still uncertain.')+' The previous save has not been resolved. Retry the same attempt before starting another revision.',true);return;
@@ -221,7 +230,7 @@ async function sendAttempt(attempt){
     }else{
       if(data.code==='session_expired'){csrf='';$('versions-refresh-session').hidden=false;}
       if(response.status===403&&data.code!=='session_expired')csrf='';
-      say(data.code==='registration_required'?'This browser no longer has access to revise the saved website. Your public edits are still here, but a new editing session cannot restore ownership. Keep any files already downloaded; recover the original registration with its private retry receipt and matching details.':(data.error||'This revision was not saved.')+' Your edits are still here. Review a fresh preview before retrying.',true);
+      say(data.code==='registration_required'?recoveryCopy('This browser no longer has access to revise the saved website. Your public edits are still here, but a new editing session cannot restore ownership. Keep any files already downloaded; recover the original registration with its private retry receipt and matching details.'):(data.error||'This revision was not saved.')+' Your edits are still here. Review a fresh preview before retrying.',true);
     }
     setMode(mode);
   }catch{
