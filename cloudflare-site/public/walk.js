@@ -10,7 +10,7 @@ const accountRecoveryReady=typeof window!=='undefined'&&typeof window.solborneSe
 function recoveryCopy(legacy){return accountRecovery?.enabled?'Sign in with the same Google account, then choose your saved business brief from Your canvas. Keep any files already downloaded.':legacy;}
 
 const form=$('walk-form'),fields=$('walk-fields'),message=$('walk-message'),previewBox=$('walk-preview-box'),frame=$('walk-preview-frame'),approval=$('walk-approved'),submit=$('walk-submit'),refresh=$('walk-refresh');
-const stageNames=['Register','Canvas open','Story & canvas','Review facts','Draft preview','Request & status'];
+const stageNames=['Sign in','Introduction','Your story','Your details','Preview','Review'];
 const fieldLabels={businessName:'your business name',description:'your business introduction',audience:'who you work with',services:'your offer and services',callToAction:'the next step for visitors',location:'where you work',email:'your public business email',phone:'your public business phone',websiteUrl:'your public business link',contact:'a public contact option'};
 const completionPattern=/^SW-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 let csrf='',busy=false,reviewed=false,stage=3,prepareGeneration=0;
@@ -90,8 +90,8 @@ function showReceipt(input){
   form.hidden=true;const receipt=$('walk-receipt');receipt.hidden=false;
   $('walk-completion').textContent='Saved request reference: '+completion;
   $('walk-receipt-title').textContent=released?'Your website files are available.':'Your website brief is saved.';
-  $('walk-request-state').textContent=released?(data.releaseBasis==='grandfathered'?'Files available from an earlier completion':'Files released'):'Pending Solborne processing';
-  $('walk-review-state').textContent=released?(data.releaseBasis==='reviewed'?'Solborne review complete':'Earlier files remain available; this status does not confirm a team review'):data.reviewState==='reviewing'?'Solborne review in progress':data.reviewState==='reviewed'?'Review complete; awaiting file release':'Awaiting Solborne review';
+  $('walk-request-state').textContent=released?(data.releaseBasis==='grandfathered'?'Files available from an earlier completion':'Files released'):'With our team';
+  $('walk-review-state').textContent=released?(data.releaseBasis==='reviewed'?'Solborne review complete':'Earlier files remain available; this status does not confirm a team review'):data.reviewState==='reviewing'?'Being reviewed':data.reviewState==='reviewed'?'Reviewed. Awaiting release.':'Waiting for review';
   $('walk-receipt-note').textContent=released?'Download both files below and keep them together. Opening the HTML on your device does not publish a website.':'Your approved public website facts have been recorded for Solborne processing and review. Files become available here after release. Use Refresh request status to check progress.';
   for(const id of ['walk-html','walk-readme'])$(id).removeAttribute('href');
   $('walk-delivery-files').hidden=!released;$('walk-handover-next').hidden=!released;
@@ -172,7 +172,7 @@ form.addEventListener('submit',async e=>{
     try{history.replaceState({solborneWalkCompletion:receipt.completion},'');}catch{}
     showReceipt(receipt);
   }catch(err){say(err.message+' Your answers are still here. Retrying the same facts will not create another completion.',true);}
-  finally{busy=false;fields.disabled=false;submit.textContent='Submit my website brief';}
+  finally{busy=false;fields.disabled=false;submit.textContent='Send for review';}
 });
 try{
   if(typeof sessionStorage!=='undefined'&&typeof location!=='undefined'&&new URL(location.href).searchParams.get('from')==='ai'){

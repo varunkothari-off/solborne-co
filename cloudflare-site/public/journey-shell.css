@@ -23,6 +23,7 @@
 .account-footer nav{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:13px}.account-footer a{color:var(--muted)}
 .workspace-page{font-family:Public,Arial,sans-serif;background:var(--paper);color:var(--ink)}
 .workspace-page>.header{width:100%;max-width:none;margin:0;box-sizing:border-box}.workspace-page .account-footer{margin-top:56px}
+.workspace-page>.header nav a{text-transform:none;letter-spacing:normal}
 .workspace-page main h1{font-family:Public,Arial,sans-serif;letter-spacing:-.05em;line-height:1.1}
 @media(hover:hover){.header .nav-signout:hover{border-color:var(--ink)}.another-business a:hover{color:var(--ink)}.account-footer a:hover{text-decoration:underline}}
 @media(max-width:1040px){.header nav{gap:16px}}
@@ -32,6 +33,12 @@
 .offer-intro{font-size:18px;line-height:1.65;color:var(--muted);max-width:58ch;margin:20px 0 0}
 #next-steps{scroll-margin-top:0;padding-top:64px}
 .enquiry-page #register{scroll-margin-top:0}
+.canvas-feature{display:grid;grid-template-columns:.9fr 1.1fr;align-items:center;gap:64px;padding-block:80px;border-top:1px solid var(--line)}
+.canvas-feature-copy>p:not(.intro):not(.quiet){font-size:18px;color:var(--muted);max-width:40ch;line-height:1.7}
+.canvas-feature .hero-art:after{display:none}.canvas-feature .hero-art:before{background:#e6ece5}
+.canvas-feature .quiet{font-size:13px}.website-offer-grid{grid-template-columns:1fr 1fr}
+.interaction-help{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.india-board .play-caption{margin:0;color:var(--muted);font-size:13px}
 .next-step-grid{align-items:stretch}.next-step-grid article{display:flex;flex-direction:column;align-items:flex-start}
 .next-step-grid article>p{flex:1}.next-step-grid article>.button,.next-step-grid article>.text-link{margin-top:8px}
 .next-step-grid article>.text-link{min-height:52px;display:inline-flex;align-items:center}
@@ -60,6 +67,7 @@
 .enquiry-page .registration-card{align-self:start}.enquiry-page .registration-card .button{font-size:15px;min-height:48px}
 .enquiry-page .registration-scope{font-size:13px;color:var(--muted)}
 @media(max-width:760px){
+ .canvas-feature{grid-template-columns:1fr;gap:24px;padding-block:52px}.canvas-feature-copy>p:not(.intro):not(.quiet){font-size:16px}.canvas-feature h2{font-size:38px}.website-offer-grid{grid-template-columns:1fr}
  .account-page .account-main,.account-footer{width:calc(100% - 40px)}
  .journey-waypoints{gap:10px;font-size:11px;margin-bottom:28px;padding-bottom:16px}.journey-waypoints li{gap:6px}.journey-waypoints li>span{width:23px;height:23px}
  .proof-link{align-items:flex-start;flex-direction:column;gap:20px;padding-block:28px}.proof-link>a{min-height:44px;display:flex;align-items:center}

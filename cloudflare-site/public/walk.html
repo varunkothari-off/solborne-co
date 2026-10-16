@@ -16,36 +16,36 @@
 <meta name="theme-color" content="#f5f6f2"><link rel="icon" href="/assets/bearing.svg" type="image/svg+xml"><link rel="preload" href="/assets/fonts/public-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/studio-motion/design.css"><link rel="stylesheet" href="/journey-shell.css"><script src="/studio-motion/design.js" defer></script><script src="/auth-session.js" defer></script><script src="/account-nav.js" defer></script></head>
 <body class="workspace-page">
 <a class="skip-link" href="#walk-main">Skip to your Walk</a>
-<header class="header"><a class="brand" href="/" aria-label="Solborne &amp; Co. home"><img src="/assets/bearing.svg" alt="" width="25" height="30"><img src="/assets/solborne-wordmark.svg" alt="Solborne & Co." width="155" height="28"></a><button class="menu" aria-expanded="false" aria-controls="site-nav" hidden>Menu</button><nav id="site-nav" aria-label="Main navigation"><a href="/">Home</a><a href="/websites.html">Websites</a><a href="/how-it-works.html">How it works</a><a href="/about.html">About</a><a class="button small" href="/signin.html">Sign in to unlock canvas</a></nav></header>
+<header class="header"><a class="brand" href="/" aria-label="Solborne &amp; Co. home"><img src="/assets/bearing.svg" alt="" width="25" height="30"><img src="/assets/solborne-wordmark.svg" alt="Solborne & Co." width="155" height="28"></a><button class="menu" aria-expanded="false" aria-controls="site-nav" hidden>Menu</button><nav id="site-nav" aria-label="Main navigation"><a href="/">Home</a><a href="/websites.html">Websites</a><a href="/how-it-works.html">How it works</a><a href="/about.html">About</a><a class="button small" href="/signin.html?next=walk">Take the Walk of Fame</a></nav></header>
 <main class="wrap walk" id="walk-main">
   <nav class="journey-progress" aria-label="Walk of Fame progress">
     <p id="walk-step-status" class="step-status">Checking your registration</p>
     <ol>
-      <li id="walk-progress-1"><span class="step-number">01</span><span>Register</span></li>
-      <li id="walk-progress-2"><span class="step-number">02</span><span>Canvas open</span></li>
-      <li id="walk-progress-3"><span class="step-number">03</span><span>Story &amp; canvas</span></li>
-      <li id="walk-progress-4"><span class="step-number">04</span><span>Review facts</span></li>
+      <li id="walk-progress-1"><span class="step-number">01</span><span>Sign in</span></li>
+      <li id="walk-progress-2"><span class="step-number">02</span><span>Introduction</span></li>
+      <li id="walk-progress-3"><span class="step-number">03</span><span>Your story</span></li>
+      <li id="walk-progress-4"><span class="step-number">04</span><span>Your details</span></li>
       <li id="walk-progress-5"><span class="step-number">05</span><span>Preview</span></li>
-      <li id="walk-progress-6"><span class="step-number">06</span><span>Request &amp; status</span></li>
+      <li id="walk-progress-6"><span class="step-number">06</span><span>Review</span></li>
     </ol>
   </nav>
   <header class="walk-intro">
-    <div><p class="eyebrow">THE WALK OF FAME</p><h1>Your business.<br>In your own words.</h1><p class="walk-lede">Complete the Walk to submit your approved brief for a free V1 website: a one-page site and editable source files available after Solborne processing, private review and release.</p></div>
-    <aside class="scope-card"><p class="micro">YOUR FREE V1</p><p>Your introduction, services and chosen contact details in a responsive one-page website.</p><p class="micro">GOING LIVE IS SEPARATE</p><p>Domain, hosting, maintenance and additional work outside the website-copy editor are separate arrangements.</p></aside>
+    <div><p class="eyebrow">THE WALK OF FAME</p><h1>Your business.<br>In your own words.</h1><p class="walk-lede">Tell us what you do, who you do it for and what makes your business yours. We’ll use your story to shape your first website.</p></div>
+    <aside class="scope-card"><p class="micro">YOUR FIRST WEBSITE</p><p>Your story, services and contact details in a responsive page. Yours to keep.</p><p class="micro">WHEN YOU’RE READY TO GO LIVE</p><p>We’ll agree your domain, hosting and any ongoing work separately.</p></aside>
   </header>
   <ol class="walk-overview" aria-label="What you will do">
     <li><strong>Tell your story</strong><span>Use five prompts to think through your business.</span></li>
     <li><strong>Choose the website copy</strong><span>Enter the words and contact details you want public.</span></li>
-    <li><strong>Approve your website brief</strong><span>Submit it for Solborne processing. Check back here for file release.</span></li>
+    <li><strong>Approve your website brief</strong><span>Send it to our team. Return here for updates.</span></li>
   </ol>
-  <p class="working-note">Your brief comes to the Solborne team. We prepare the website and manually check its content, design and public details before releasing any files. You can return here to check its status.</p><div class="access-strip"><p id="walk-access" role="status">Checking your saved registration.</p><a id="walk-register-link" href="/start.html#registration-recovery">Recover registration or start your Walk</a><div id="walk-canvas-links" hidden><a href="/downloads/canvas.pdf">Canvas PDF</a><a href="/downloads/canvas.txt">Editable canvas</a></div></div>
+  <p class="working-note">Our team reviews every website before release. Come back here to see how yours is progressing.</p><div class="access-strip"><p id="walk-access" role="status">Checking your saved registration.</p><a id="walk-register-link" href="/start.html#registration-recovery">Recover registration or start your Walk</a><div id="walk-canvas-links" hidden><a href="/downloads/canvas.pdf">Canvas PDF</a><a href="/downloads/canvas.txt">Editable canvas</a></div></div>
   <form id="walk-form" novalidate autocomplete="off">
   <fieldset disabled id="walk-fields"><legend class="sr-only">Your Walk of Fame</legend>
     <section id="walk-stage-3" class="walk-stage">
       <div class="stage-heading"><div><p class="micro">03 / STORY &amp; CANVAS</p><h2 id="walk-heading-3" tabindex="-1">Start with what you know.</h2></div><output id="canvas-missing" class="provenance missing" aria-live="polite">Required details not filled yet</output></div>
       <p>Share information you are comfortable making public. Do not include customer records, identity documents or confidential financial details. Story answers are processed on submission; only the website facts you approve are stored.</p>
       <p class="working-note">Keep this page open while you work. Unfinished answers are not saved if you leave or reload it.</p>
-      <div class="walk-tabs" role="tablist" aria-label="Story and website canvas"><button type="button" role="tab" id="tab-questions" aria-controls="questions-panel" aria-selected="true">1. Your story</button><button type="button" role="tab" id="tab-canvas" aria-controls="canvas-panel" aria-selected="false" tabindex="-1">2. Website copy</button></div>
+      <div class="walk-tabs" role="tablist" aria-label="Story and website copy"><button type="button" role="tab" id="tab-questions" aria-controls="questions-panel" aria-selected="true">1. Your story</button><button type="button" role="tab" id="tab-canvas" aria-controls="canvas-panel" aria-selected="false" tabindex="-1">2. Website copy</button></div>
       <div id="questions-panel" role="tabpanel" aria-labelledby="tab-questions">
         <p class="topic-note">These prompts help you prepare. They do not automatically fill your website. Short answers are enough; use “already covered” when your first answer covers a follow-up.</p>
         <section class="question-card"><p class="micro">QUESTION 01 / 05</p><h3>What do you do, and who is it for?</h3><label for="story0">Your business story <span class="field-required">Required</span></label><p class="field-hint" id="story0-hint">Describe the work, the people you serve and what led you here. Use your own words.</p><textarea id="story0" name="story0" maxlength="3000" aria-describedby="story0-hint story0-error" required></textarea><p id="story0-error" class="field-error" hidden></p></section>
@@ -96,7 +96,7 @@
       <p class="field-hint" id="preview-width-note">Wide view fits the available space. Phone view shows a narrower layout.</p>
       <div id="walk-preview-shell" class="preview-shell" data-view="wide"><iframe id="walk-preview-frame" title="Your V1 website preview" aria-describedby="preview-width-note" sandbox="" referrerpolicy="no-referrer"></iframe></div>
       <label class="consent"><input type="checkbox" id="walk-approved"><span>I reviewed and approve these public website facts and contact details. Submit this brief for Solborne processing and private review; website files are available only after release. The free V1 includes the website build and editable source files. Hosting, domains, maintenance and additional work outside the website editor are separate.</span></label>
-      <div class="stage-actions"><button type="button" id="walk-edit" class="text-button">Edit my answers</button><button class="button primary" type="submit" id="walk-submit" disabled>Submit my website brief</button></div>
+      <div class="stage-actions"><button type="button" id="walk-edit" class="text-button">Edit my answers</button><button class="button primary" type="submit" id="walk-submit" disabled>Send for review</button></div>
     </div></section>
   </fieldset>
   </form>

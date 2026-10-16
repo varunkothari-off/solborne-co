@@ -29,7 +29,7 @@ function setMode(next){
   $('versions-edit').disabled=loading||editing()||ownershipLost||!selected?.meta.isLatest;
   $('versions-latest').disabled=loading||locked;$('versions-conflict-latest').disabled=locked;
   $('versions-save').disabled=loading||locked||!reviewed||!approval.checked||conflicted||ownershipLost||!csrf;
-  $('versions-save').textContent=mode==='saving'?'Saving your revision brief...':'Submit my revision brief';
+  $('versions-save').textContent=mode==='saving'?'Saving your revision brief...':'Send changes for review';
   $('versions-draft-state').textContent=mode==='pending'?'3 / SAVE RESULT UNCONFIRMED':mode==='saving'?'3 / SAVING APPROVED PREVIEW':'3 / UNSAVED REVISION PREVIEW';
   $('versions-draft-note').textContent=mode==='pending'?'This is the local draft for a save whose result is unconfirmed. No saved processing status has been confirmed yet. Retry the same save; any earlier released files remain separate.':mode==='saving'?'This local draft is being submitted. Wait for its saved request receipt before treating the brief as recorded. Any earlier released files remain separate.':'This local draft uses your edited website facts. It has not been submitted, delivered or published. Any earlier released files remain separate.';
 }
@@ -41,8 +41,8 @@ function metadata(input){
   if(input.deliveryState==='released'&&!['grandfathered','reviewed'].includes(input.releaseBasis))throw new Error('File release details could not be confirmed.');
   return {...input,downloads:input.deliveryState==='released'?downloads:[]};
 }
-function deliveryLabel(meta){return meta.deliveryState==='released'?(meta.releaseBasis==='grandfathered'?'Files available from an earlier completion':'Files released'):'Pending Solborne processing';}
-function reviewLabel(meta){return meta.deliveryState==='released'?(meta.releaseBasis==='reviewed'?'Solborne review complete':'Earlier file access preserved; this does not confirm a team review'):meta.reviewState==='reviewing'?'Solborne review in progress':meta.reviewState==='reviewed'?'Review complete; awaiting file release':'Awaiting Solborne review';}
+function deliveryLabel(meta){return meta.deliveryState==='released'?(meta.releaseBasis==='grandfathered'?'Files available from an earlier completion':'Files released'):'With our team';}
+function reviewLabel(meta){return meta.deliveryState==='released'?(meta.releaseBasis==='reviewed'?'Solborne review complete':'Earlier file access preserved; this does not confirm a team review'):meta.reviewState==='reviewing'?'Being reviewed':meta.reviewState==='reviewed'?'Reviewed. Awaiting release.':'Waiting for review';}
 function renderFacts(container,value){
   container.replaceChildren();
   for(const name of Object.keys(websiteFields)){

@@ -8,13 +8,18 @@
   }
   window.solborneSession().then(session => {
     if (!session.authenticated) return;
-    const entry = nav.querySelector('a[href="/signin.html"]');
+    const entry = nav.querySelector('a[href="/signin.html"],a[href="/signin.html?next=walk"]');
     if (entry) {
-      entry.href = '/canvas.html'; entry.textContent = 'Your canvas';
-      if (current === '/canvas.html') entry.setAttribute('aria-current', 'page');
+      const walk = entry.getAttribute?.('href')?.includes('next=walk');
+      entry.href = walk ? (session.registered?'/walk.html':'/start.html') : '/canvas.html';
+      entry.textContent = walk ? (session.registered?'Your Walk':'Take the Walk of Fame') : 'Your canvas';
+      if (current === entry.href || current === new URL(entry.href,'https://solborne.in').pathname) entry.setAttribute('aria-current', 'page');
     }
     for (const link of document.querySelectorAll('main a[href="/signin.html"]')) {
       link.href = '/canvas.html'; link.textContent = 'Open your canvas';
+    }
+    for (const link of document.querySelectorAll('main a[href="/signin.html?next=walk"]')) {
+      link.href = session.registered?'/walk.html':'/start.html';
     }
     const button = document.createElement('button');
     button.type = 'button'; button.id = 'signout'; button.className = 'nav-signout'; button.textContent = 'Sign out';
