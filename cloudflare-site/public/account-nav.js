@@ -13,6 +13,9 @@
       entry.href = '/canvas.html'; entry.textContent = 'Your canvas';
       if (current === '/canvas.html') entry.setAttribute('aria-current', 'page');
     }
+    for (const link of document.querySelectorAll('main a[href="/signin.html"]')) {
+      link.href = '/canvas.html'; link.textContent = 'Open your canvas';
+    }
     const button = document.createElement('button');
     button.type = 'button'; button.id = 'signout'; button.className = 'nav-signout'; button.textContent = 'Sign out';
     button.addEventListener('click', async () => {
