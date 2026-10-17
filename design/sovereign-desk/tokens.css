@@ -1,0 +1,80 @@
+/*
+  Solborne Sovereign Desk — design tokens
+  Concept: "the vault that thinks." Physical, heavy, quiet.
+  Every value here is OKLCH and driven off --brand-hue (oxidised brass, ~72°) —
+  shift that one number to retune the whole accent family without touching
+  anything else. See design/sovereign-desk/rationale.md for the brief this
+  answers and the references it cites.
+*/
+
+:root {
+  /* ---- brand hue driver ---- */
+  --brand-hue: 72; /* oxidised brass */
+
+  /* ---- ground (graphite) ---- */
+  --sd-graphite: oklch(15% 0.004 260);
+  --sd-graphite-2: oklch(19% 0.006 260); /* raised panel */
+  --sd-graphite-3: oklch(24% 0.008 260); /* pill / control fill */
+  --sd-hairline: oklch(32% 0.01 260);
+
+  /* ---- text (bone) ---- */
+  --sd-bone: oklch(93% 0.014 85);
+  --sd-bone-dim: oklch(93% 0.014 85 / 0.62);
+  --sd-bone-faint: oklch(93% 0.014 85 / 0.36);
+
+  /* ---- accent (oxidised brass) — LED, CTA, single live-status color ---- */
+  --sd-brass: oklch(62% 0.10 var(--brand-hue));
+  --sd-brass-hover: oklch(70% 0.11 var(--brand-hue));
+  --sd-brass-wash: oklch(62% 0.10 var(--brand-hue) / 0.16);
+
+  /* ---- cool slate — compliance sections only ---- */
+  --sd-slate: oklch(32% 0.025 235);
+  --sd-slate-2: oklch(38% 0.03 235);
+  --sd-slate-border: oklch(42% 0.03 235);
+  --sd-slate-text: oklch(90% 0.02 235);
+  --sd-slate-text-dim: oklch(80% 0.02 235);
+
+  /* ---- warning red — used exactly once, the cloud-vs-desk comparison ---- */
+  --sd-warn: oklch(50% 0.16 30);
+
+  /* ---- type scale: 88/56/32/20/16/13 (desktop) ---- */
+  --sd-text-display-1: 88px; /* hero H1 */
+  --sd-text-display-2: 56px; /* unused headroom — reserved for a future oversized moment */
+  --sd-text-h3: 32px;        /* section headers */
+  --sd-text-lead: 20px;      /* hero subline */
+  --sd-text-body: 16px;      /* body copy */
+  --sd-text-small: 13px;     /* eyebrows, mono labels */
+
+  /* mobile step-down (~45-55% on display sizes, ~90% on body/small) */
+  --sd-text-display-1-mobile: 40px;
+  --sd-text-h3-mobile: 22px;
+  --sd-text-lead-mobile: 14.5px;
+  --sd-text-body-mobile: 13.5px;
+  --sd-text-small-mobile: 11px;
+
+  /* ---- rhythm ---- */
+  --sd-section-gap-desktop: 160px;
+  --sd-section-gap-mobile: 56px;
+  --sd-radius: 4px;
+  --sd-radius-pill: 20px;
+  --sd-grid-columns: 12;
+  --sd-grid-gap-desktop: 32px;
+
+  /* ---- type families ---- */
+  --sd-font-display: "Unbounded", sans-serif;     /* high-contrast grotesk, wide caps */
+  --sd-font-body: "Work Sans", sans-serif;         /* humanist sans */
+  --sd-font-devanagari: "Hind", sans-serif;        /* EN/हिन्दी toggle + HI/BN copy */
+  --sd-font-mono: "IBM Plex Mono", monospace;      /* status strip, terminal, figures */
+}
+
+/*
+  Usage notes
+  - Paper is graphite, never bone: this is a dark product, not a dark-mode
+    toggle on a light brand.
+  - Brass is the ONE accent: the LED, the primary CTA, the "live" status dot.
+    Never a body-text color, never a large fill.
+  - Slate is reserved for the compliance section only — it reads as a
+    separate, cooler "institutional" register against the warmer graphite.
+  - Warning red (--sd-warn) appears exactly once: the Cloud vs Desk strip.
+    Do not reuse it elsewhere — that is what keeps it meaning something.
+*/

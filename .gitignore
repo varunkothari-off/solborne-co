@@ -9,6 +9,8 @@ node_modules/
 
 # --- local tooling ---
 .claude/
+.agents/
+skills-lock.json
 
 # --- OS / editor ---
 .DS_Store
