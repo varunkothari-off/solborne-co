@@ -1,3 +1,4 @@
+import {createLiveToken} from './walk-live-token.mjs';
 import { authRoute, authEnabled, authIdentity } from './canvas-auth.mjs';
 import {flushPresales} from './presales-sync.mjs';
 import { database, first, all, run, rateLimit, cleanup } from './db.mjs';
@@ -104,10 +105,10 @@ async function register(request,env,now,authFetch=fetch) {
   catch(cause){const raced=await first(env,'SELECT id,payload_hash,created_at FROM solborne_registrations WHERE idempotency_key=?',[key]);if(raced){if(identity){const linked=await first(env,'SELECT registration_id FROM solborne_auth_registrations WHERE user_id=? AND registration_id=?',[identity.id,raced.id]);if(!linked)return error('This saved enquiry belongs to a different sign-in.',403,'identity_mismatch');await run(env,'UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=? AND user_id=?',[raced.id,identity.sessionHash,identity.id]);}return raced.payload_hash===payloadHash?await authorizedReceipt(request,env,raced,now,true,authFetch):error('This attempt was already used for different details.',409,'idempotency_conflict');}throw cause;}
   return await authorizedReceipt(request,env,{id,created_at:now},now,false,authFetch);
 }
-async function serveAsset(request,path) {
+async function serveAsset(request,path,env={}) {
   const key=path==='/'?'index.html':(path==='/walk'||path==='/walk/'?'walk.html':path==='/studio'||path==='/studio/'?'studio/index.html':path==='/studio-motion'||path==='/studio-motion/'?'studio-motion/index.html':path.replace(/^\//,''));const entry=assets[key];if(!entry)return error('This page was not found.',404,'not_found');
   const bytes=Uint8Array.from(atob(entry.body),c=>c.charCodeAt(0));const headers={...safeHeaders,'Content-Type':entry.type,'Cache-Control':'no-cache','ETag':'"'+entry.etag+'"'};
-  if(key==='ai-walk.html')headers['Permissions-Policy']='camera=(), microphone=(self), geolocation=()';
+  if(key==='ai-walk.html'){headers['Permissions-Policy']='camera=(), microphone=(self), geolocation=()';if(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true')headers['Content-Security-Policy']=headers['Content-Security-Policy'].replace("connect-src 'self'","connect-src 'self' wss://generativelanguage.googleapis.com");}
   const marketing=new Set(['/','/websites.html','/how-it-works.html','/about.html','/contact.html','/offer.html','/privacy.html','/terms.html']).has(path);
   if(entry.schemaHashes?.length||marketing){
     headers['Content-Security-Policy']=headers['Content-Security-Policy'].replace("script-src 'self'",`script-src 'self' ${[...(entry.schemaHashes||[]),...(marketing?['https://www.googletagmanager.com']:[])].join(' ')}`);
@@ -123,7 +124,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     const authResponse=await authRoute(request,env,now,{fetcher:authFetch});if(authResponse)return authResponse;
     if(['GET','HEAD'].includes(request.method)&&['/index.html','/improve.html'].includes(path))return new Response(null,{status:301,headers:{...safeHeaders,Location:(path==='/index.html'?'/':'/websites.html')+url.search,'Cache-Control':'no-cache'}});
     if(path==='/api/ai-walk/status'&&request.method==='GET')return json({ok:true,enabled:providerReady(env)});
-    if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete','/api/ai-walk/submit','/api/ai-walk/transcribe'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
+    if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete','/api/ai-walk/submit','/api/ai-walk/transcribe','/api/ai-walk/live-token'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
       if(!await intakeReady(env))return error('The Walk is temporarily unavailable.',503,'registration_unavailable');
       const access=await accessFor(request,env,now);if(!access)return error('Save your basic details first.',403,'registration_required');
       if(['/api/ai-walk/preview','/api/ai-walk/complete'].includes(path)&&env.AI_WEBSITE_BUILD_ENABLED!=='true')return error('Website preparation follows team research and design approval. This Walk saves your business brief only.',503,'manual_design_required');
@@ -131,10 +132,19 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
         const {row,state}=await loadDraft(env,access.registration_id);
         if(path==='/api/ai-walk/preview'){if(!state.review)return error('Run the reviews before opening a draft.',422,'review_required');return json({ok:true,html:renderAIPortfolio(state,templateCSS(state)),template:state.template});}
         if(path!=='/api/ai-walk')return error('Use the correct action.',405,'method_not_allowed');
-        return json({ok:true,enabled:providerReady(env),state,revision:row?.revision||0});
+        return json({ok:true,enabled:providerReady(env),state,revision:row?.revision||0,...(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true'?{voiceMode:'live'}:{})});
       }
       if(!validOrigin(request,env))return error('Open the Walk directly and try again.',403,'origin_required');
       const input=await readJson(request,path==='/api/ai-walk/transcribe'?MAX_AUDIO_BODY:8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');
+      if(path==='/api/ai-walk/live-token'){
+        if(request.method!=='POST')return error('Use the correct action.',405,'method_not_allowed');
+        if(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED!=='true'||!providerReady(env))return error('Live transcription is not enabled.',503,'live_voice_disabled');
+        if(input.consent!==true||input.audioConsent!==true)return error('Agree to audio processing first.',422,'audio_consent_required');
+        const {state}=await loadDraft(env,access.registration_id);if(state.submission)return error('Your brief is already with our team.',409,'already_submitted');
+        if(!await rateLimit(env,'walk-live:'+access.registration_id,now,900000,10)||!await rateLimit(env,'walk-live-global',now,86400000,1000))return error('Please pause before recording another answer. You can still type.',429,'voice_limit');
+        try{return json({ok:true,...await createLiveToken(env,{fetcher:modelFetch,now,signal:request.signal})});}
+        catch{return error('Live transcription could not connect. Please try again or type your answer.',502,'live_voice_unavailable');}
+      }
       if(path==='/api/ai-walk/transcribe'){
         if(request.method!=='POST')return error('Use the correct action.',405,'method_not_allowed');
         if(!providerReady(env))return error('Voice transcription is temporarily unavailable. You can still type your answer.',503,'provider_not_connected');
@@ -167,7 +177,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     if(path.startsWith('/api/'))return error('This operation is not supported.',405,'method_not_allowed');
     if(request.method!=='GET'&&request.method!=='HEAD')return error('This operation is not supported.',405,'method_not_allowed',{'Allow':'GET, HEAD'});
     if(env.AI_WALK_ENABLED==='true'&&['/walk','/walk/','/walk.html'].includes(path))return new Response(null,{status:302,headers:{...safeHeaders,...noStore,Location:'/ai-walk.html'}});
-    return await serveAsset(request,path);
+    return await serveAsset(request,path,env);
   } catch(cause) {
     if(cause instanceof FormError)return error(cause.message,cause.status);
     // Never log request bodies, names, contact details, cookies, or database errors.

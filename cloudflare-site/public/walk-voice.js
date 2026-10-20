@@ -17,6 +17,8 @@
   function update(){
    const ctx=context(),consented=!!ctx.consent&&$('voice-consent').checked;
    if(!consented&&active){cancel('Recording cancelled. Your microphone is off.');return;}
+   $('voice-stop').textContent='Stop & transcribe';$('voice-use').hidden=false;$('voice-transcript').readOnly=false;
+   $('voice-note').textContent='Up to one minute. After you stop, your recording is sent to Google for transcription in the language you speak. Check and edit the words before sending your answer.';
    $('voice-start').disabled=!supported||!ctx.allowed||!consented||active;
    $('voice-start').hidden=active||phase==='review'||phase==='error';
    $('voice-stop').hidden=phase!=='recording';$('voice-timer').hidden=phase!=='recording';
@@ -89,13 +91,14 @@
    if(candidate.length>MAX_TEXT){text('Your answer and transcript total '+candidate.length+' characters. Shorten them to 2,000 before adding. Your typed answer has not changed.',true);return;}
    answer.value=candidate;answer.dispatchEvent(new Event('input',{bubbles:true}));cancel('Transcript added. Review your answer, then choose Send answer.');answer.focus();
   }
-  $('voice-start').addEventListener('click',start);$('voice-stop').addEventListener('click',stop);$('voice-cancel').addEventListener('click',()=>cancel());
-  $('voice-retry').addEventListener('click',()=>{if(!active)void transcribe(generation);});$('voice-again').addEventListener('click',start);$('voice-use').addEventListener('click',useTranscript);
-  $('voice-consent').addEventListener('change',()=>{if(!$('voice-consent').checked)cancel('Audio consent withdrawn. Local recording and transcript discarded.');else update();});
-  $('ai-consent').addEventListener('change',()=>{if(!$('ai-consent').checked)cancel('Consent withdrawn. Local recording and transcript discarded.');else update();});
-  win.addEventListener('pagehide',()=>cancel(''));win.addEventListener('beforeunload',()=>cancel(''));
+  const handlers=[];function bind(target,event,fn){target.addEventListener(event,fn);handlers.push(()=>target.removeEventListener?.(event,fn));}
+  bind($('voice-start'),'click',start);bind($('voice-stop'),'click',stop);bind($('voice-cancel'),'click',()=>cancel());
+  bind($('voice-retry'),'click',()=>{if(!active)void transcribe(generation);});bind($('voice-again'),'click',start);bind($('voice-use'),'click',useTranscript);
+  bind($('voice-consent'),'change',()=>{if(!$('voice-consent').checked)cancel('Audio consent withdrawn. Local recording and transcript discarded.');else update();});
+  bind($('ai-consent'),'change',()=>{if(!$('ai-consent').checked)cancel('Consent withdrawn. Local recording and transcript discarded.');else update();});
+  bind(win,'pagehide',()=>cancel(''));bind(win,'beforeunload',()=>cancel(''));
   if(!supported)text('Audio recording isn’t available in this browser. Type your answer, or use the microphone on your device’s keyboard.');
-  update();return {update,cancel,destroy(){destroyed=true;cancel('');},get phase(){return phase;}};
+  update();return {update,cancel,destroy(){destroyed=true;cancel('');for(const remove of handlers)remove();},get phase(){return phase;}};
  }
  global.SolborneVoice={create,MAX_BYTES,MAX_MS};
 })(window);

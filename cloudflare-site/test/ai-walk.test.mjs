@@ -106,3 +106,24 @@ test('public Walk opens conversation only when enabled, while existing website r
  const f=fixture(t);for(const path of ['/walk','/walk/','/walk.html']){const r=await f.call(path);assert.equal(r.status,302);assert.equal(r.headers.get('Location'),'/ai-walk.html');}
  f.env.AI_WALK_ENABLED='false';assert.equal((await f.call('/walk.html')).status,200);
 });
+
+test('Live transcription token issuance requires owner, origin, csrf, separate consent and preview flag',async t=>{
+ const f=fixture(t),s=await register(f),path='/api/ai-walk/live-token',payload={csrf:s.csrf,consent:true,audioConsent:true};
+ f.setFetch(async()=>Response.json({name:'auth_tokens/synthetic-ephemeral'}));
+ assert.equal((await post(f,s,path,payload)).status,503);f.env.GEMINI_LIVE_TRANSCRIPTION_ENABLED='true';
+ assert.equal((await f.call(path,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(payload)})).status,403);
+ assert.equal((await post(f,s,path,{...payload,csrf:key()})).status,403);
+ assert.equal((await post(f,s,path,payload,{Origin:'https://outside.example'})).status,403);
+ assert.equal((await post(f,s,path,{...payload,audioConsent:false})).status,422);
+ const r=await post(f,s,path,payload);assert.equal(r.status,200);const body=await r.json();assert.equal(body.model,'gemini-3.5-transcribe-live');assert.equal(body.token,'auth_tokens/synthetic-ephemeral');assert.match(r.headers.get('cache-control'),/no-store/);assert.equal(JSON.stringify(body).includes(f.env.GEMINI_API_KEY),false);
+ assert.equal(f.db.sql.prepare('SELECT count(*) AS n FROM solborne_ai_walks').get().n,0);
+ assert.equal((await (await f.call('/api/ai-walk',{headers:{Cookie:s.cookie}})).json()).voiceMode,'live');
+ for(let i=0;i<9;i++)assert.equal((await post(f,s,path,payload)).status,200);
+ assert.equal((await post(f,s,path,payload)).status,429);
+});
+
+test('live websocket permission is limited to the opted-in Walk document',async t=>{
+ const f=fixture(t);const normal=await f.call('/ai-walk.html');assert.ok(!normal.headers.get('content-security-policy').includes('wss://'));
+ f.env.GEMINI_LIVE_TRANSCRIPTION_ENABLED='true';const walk=await f.call('/ai-walk.html');assert.ok(walk.headers.get('content-security-policy').includes('wss://generativelanguage.googleapis.com'));
+ const home=await f.call('/');assert.ok(!home.headers.get('content-security-policy').includes('wss://'));
+});
