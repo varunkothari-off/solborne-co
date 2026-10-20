@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": [
+    "src/**/*.mjs",
+    "deployment-worker.mjs"
+  ]
+}

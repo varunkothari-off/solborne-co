@@ -55,6 +55,12 @@ export async function reviewCall(env,facts,kind,fetcher=fetch){
   const sources=(candidate?.groundingMetadata?.groundingChunks||[]).map(x=>x.web).filter(x=>x&&typeof x.uri==='string'&&x.uri.startsWith('https://')).map(x=>({title:String(x.title||'Source').slice(0,200),url:x.uri.slice(0,1500)}));
   return validateReview(JSON.parse(text),sources);
 }
+// Reserve only eligible, leased provider work; rejected requests never consume shared units.
+async function reserveModelCalls(env,now,units){
+ const windowMs=86400000,key='ai-walk-global:'+Math.floor(now/windowMs);
+ return !!await first(env,'INSERT INTO solborne_rate_limits (key,count,expires_at) VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET count=count+excluded.count WHERE count+excluded.count<=1000 RETURNING count',[key,units,now+windowMs*2]);
+}
+const dailyLimit=()=>({status:429,body:{ok:false,code:'daily_limit',error:'The AI Walk has reached today’s service limit. Please return later or contact Solborne.'}});
 export async function reviewDraft(env,registration,input,now,{fetcher=fetch}={}){
   if(!providerReady(env))return {status:503,body:{ok:false,error:'Connect the AI provider before running reviews.'}};
   const {row,state}=await loadDraft(env,registration);
@@ -62,6 +68,7 @@ export async function reviewDraft(env,registration,input,now,{fetcher=fetch}={})
   const claim=await run(env,'UPDATE solborne_ai_walks SET busy_until=?,calls=calls+2 WHERE registration_id=? AND revision=? AND busy_until<=? AND calls<=38',[now+120000,registration,row.revision,now]);
   if(!(claim.meta?.changes>=1))return {status:409,body:{ok:false,error:'A review is running or the call limit has been reached. Refresh saved progress.'}};
   try{
+    if(!await reserveModelCalls(env,now,2)){await run(env,'UPDATE solborne_ai_walks SET busy_until=0,calls=calls-2 WHERE registration_id=? AND revision=? AND busy_until=?',[registration,row.revision,now+120000]);return dailyLimit();}
     const brief={publicFacts:state.facts,privateBusinessBrief:state.businessBrief||{}};
     const research=await reviewCall(env,brief,'research',fetcher),marketing=await reviewCall(env,brief,'marketing',fetcher);
     // Advice stays separate from owner-approved public facts. Never silently rewrite facts.
@@ -89,6 +96,7 @@ export async function answerDraft(env,registration,input,now,{fetcher=fetch}={})
     await run(env,'UPDATE solborne_ai_walks SET state_json=? WHERE registration_id=? AND revision=? AND busy_until=?',[JSON.stringify(callState),registration,input.revision,now+60000]);
   }
   try{
+    if(!await reserveModelCalls(env,now,1)){await run(env,'UPDATE solborne_ai_walks SET busy_until=0,calls=calls-1 WHERE registration_id=? AND revision=? AND busy_until=?',[registration,input.revision,now+60000]);return dailyLimit();}
     const {reply,usage}=await generateReply(env,callState,input.message,{fetcher});
     const next={...callState,...reply,pendingAnswer:null,consentVersion:'solborne-business-walk-v2',consentAt:state.consentVersion==='solborne-business-walk-v2'?state.consentAt||now:now,messages:[...state.messages,{role:'user',text:input.message},{role:'assistant',text:[reply.message,reply.question].filter(Boolean).join('\n\n')}].slice(-80),review:null,usage:{input:(state.usage?.input||0)+usage.input,output:(state.usage?.output||0)+usage.output,thinking:(state.usage?.thinking||0)+usage.thinking}};
     const saved=await run(env,'UPDATE solborne_ai_walks SET state_json=?,revision=revision+1,busy_until=0,updated_at=? WHERE registration_id=? AND revision=? AND busy_until=?',[JSON.stringify(next),now,registration,input.revision,now+60000]);

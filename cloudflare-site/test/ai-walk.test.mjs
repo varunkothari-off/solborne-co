@@ -127,3 +127,21 @@ test('live websocket permission is limited to the opted-in Walk document',async 
  f.env.GEMINI_LIVE_TRANSCRIPTION_ENABLED='true';const walk=await f.call('/ai-walk.html');assert.ok(walk.headers.get('content-security-policy').includes('wss://generativelanguage.googleapis.com'));
  const home=await f.call('/');assert.ok(!home.headers.get('content-security-policy').includes('wss://'));
 });
+
+test('invalid, stale and busy AI requests cannot debit the shared daily model allowance',async t=>{
+ const f=fixture(t),s=await register(f);let calls=0;f.setFetch(async()=>{calls++;return Response.json({candidates:[{content:{parts:[{text:JSON.stringify(reply)}]}}]});});
+ for(let i=0;i<3;i++)assert.equal((await post(f,s,'/api/ai-walk/review',{csrf:s.csrf,ownerApproved:true,revision:0})).status,422);
+ assert.equal((await answer(f,s,{consent:false})).status,422);
+ assert.equal(f.db.sql.prepare("SELECT COALESCE(SUM(count),0) AS n FROM solborne_rate_limits WHERE key LIKE 'ai-walk-global:%'").get().n,0);
+ assert.equal(calls,0);assert.equal((await answer(f,s)).status,200);
+ assert.equal((await answer(f,s,{revision:0})).status,409);
+ assert.equal(f.db.sql.prepare("SELECT SUM(count) AS n FROM solborne_rate_limits WHERE key LIKE 'ai-walk-global:%'").get().n,1);
+});
+test('two-call review reserves shared units atomically and releases its lease when budget is full',async t=>{
+ const f=fixture(t),s=await register(f);assert.equal((await answer(f,s)).status,200);
+ f.db.sql.prepare("UPDATE solborne_rate_limits SET count=999 WHERE key LIKE 'ai-walk-global:%'").run();const before=f.db.sql.prepare('SELECT calls FROM solborne_ai_walks').get().calls;
+ let provider=0;f.setFetch(async()=>{provider++;throw Error('No budget available');});
+ assert.equal((await post(f,s,'/api/ai-walk/review',{csrf:s.csrf,ownerApproved:true,revision:1})).status,429);
+ assert.equal(provider,0);assert.equal(f.db.sql.prepare("SELECT count FROM solborne_rate_limits WHERE key LIKE 'ai-walk-global:%'").get().count,999);
+ const row=f.db.sql.prepare('SELECT calls,busy_until FROM solborne_ai_walks').get();assert.equal(row.calls,before);assert.equal(row.busy_until,0);
+});

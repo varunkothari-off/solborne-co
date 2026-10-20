@@ -2,6 +2,7 @@
   "name": "solborne-presales-reviewed-20261007",
   "account_id": "18e2e0a5c446f761822775d3ce5b5d7d",
   "main": "deployment-worker.mjs",
+  "tsconfig": "tsconfig.worker.json",
   "compatibility_date": "2026-10-08",
   "workers_dev": false,
   "preview_urls": false,

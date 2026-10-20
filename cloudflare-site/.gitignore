@@ -10,3 +10,6 @@ private/*
 !private/README.md
 evidence/
 *.log
+
+# Local owner queue snapshots and customer source exports
+private-owner/

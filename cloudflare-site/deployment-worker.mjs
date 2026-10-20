@@ -12,11 +12,12 @@ export default {
    return new Response(null,{status:301,headers:{...boundaryHeaders,Location:canonical+url.pathname+url.search}});
   }
   const response=await candidate.fetch(request,env,ctx);
+  const secureHeaders=new Headers(response.headers);secureHeaders.set('Strict-Transport-Security','max-age=31536000');
   if(response.status===200&&/^text\/html(?:;|$)/i.test(response.headers.get('Content-Type')||'')){
-   const headers=new Headers(response.headers),cache=headers.get('Cache-Control');
+   const headers=secureHeaders,cache=headers.get('Cache-Control');
    headers.set('Cache-Control',cache?cache+', no-transform':'no-transform');
    return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
   }
-  return response;
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers:secureHeaders});
  }
 };

@@ -106,7 +106,12 @@ async function register(request,env,now,authFetch=fetch) {
   return await authorizedReceipt(request,env,{id,created_at:now},now,false,authFetch);
 }
 async function serveAsset(request,path,env={}) {
-  const key=path==='/'?'index.html':(path==='/walk'||path==='/walk/'?'walk.html':path==='/studio'||path==='/studio/'?'studio/index.html':path==='/studio-motion'||path==='/studio-motion/'?'studio-motion/index.html':path.replace(/^\//,''));const entry=assets[key];if(!entry)return error('This page was not found.',404,'not_found');
+  const key=path==='/'?'index.html':(path==='/walk'||path==='/walk/'?'walk.html':path==='/studio'||path==='/studio/'?'studio/index.html':path==='/studio-motion'||path==='/studio-motion/'?'studio-motion/index.html':path.replace(/^\//,''));const entry=assets[key];if(!entry){
+    if(request.headers.get('Accept')?.includes('text/html')&&assets['404.html']){
+      const recovery=await serveAsset(request,'/404.html',env),headers=new Headers(recovery.headers);headers.set('Cache-Control','no-store');headers.set('Vary','Accept');return new Response(recovery.body,{status:404,headers});
+    }
+    return error('This page was not found.',404,'not_found');
+  }
   const bytes=Uint8Array.from(atob(entry.body),c=>c.charCodeAt(0));const headers={...safeHeaders,'Content-Type':entry.type,'Cache-Control':'no-cache','ETag':'"'+entry.etag+'"'};
   if(key==='ai-walk.html'){headers['Permissions-Policy']='camera=(), microphone=(self), geolocation=()';if(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true')headers['Content-Security-Policy']=headers['Content-Security-Policy'].replace("connect-src 'self'","connect-src 'self' wss://generativelanguage.googleapis.com");}
   const marketing=new Set(['/','/websites.html','/how-it-works.html','/about.html','/contact.html','/offer.html','/privacy.html','/terms.html']).has(path);
@@ -116,7 +121,7 @@ async function serveAsset(request,path,env={}) {
   }
   if(entry.type.startsWith('text/html')&&(!marketing))headers['X-Robots-Tag']='noindex, follow';
   if(entry.type.startsWith('video/')){headers['Accept-Ranges']='bytes';const range=request.headers.get('Range');if(range){const match=range.match(/^bytes=(\d*)-(\d*)$/);let start=0,end=bytes.length-1;if(!match||(!match[1]&&!match[2]))return new Response(null,{status:416,headers:{...headers,'Content-Range':`bytes */${bytes.length}`}});if(!match[1])start=Math.max(0,bytes.length-Number(match[2]));else{start=Number(match[1]);if(match[2])end=Math.min(end,Number(match[2]));}if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>end||start>=bytes.length)return new Response(null,{status:416,headers:{...headers,'Content-Range':`bytes */${bytes.length}`}});headers['Content-Range']=`bytes ${start}-${end}/${bytes.length}`;headers['Content-Length']=String(end-start+1);return new Response(request.method==='HEAD'?null:bytes.slice(start,end+1),{status:206,headers});}headers['Content-Length']=String(bytes.length);}
-  return new Response(request.method==='HEAD'?null:bytes,{headers});
+  return new Response(request.method==='HEAD'?null:bytes,{status:key==='404.html'?404:200,headers});
 }
 export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch,authFetch=fetch}={}) {
   const now=clock(),url=new URL(request.url),path=url.pathname;
@@ -157,10 +162,6 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
       if(request.method==='DELETE'){if(path!=='/api/ai-walk')return error('Use the correct action.',405,'method_not_allowed');const {row}=await loadDraft(env,access.registration_id);if(row?.busy_until>now)return error('Wait for the current operation before deleting this conversation.',409,'busy');await run(env,'DELETE FROM solborne_ai_walks WHERE registration_id=?',[access.registration_id]);return json({ok:true,deleted:true});}
       if(path==='/api/ai-walk/submit'){const result=await submitBrief(env,access.registration_id,input,now);return json(result.body,result.status);}
       if(!await rateLimit(env,'ai-walk:'+access.registration_id,now,900000,20))return error('Too many answers at once. Please continue shortly.',429,'rate_limited');
-      if(['/api/ai-walk','/api/ai-walk/review'].includes(path)){
-        const calls=path.endsWith('/review')?2:1;
-        for(let i=0;i<calls;i++)if(!await rateLimit(env,'ai-walk-global',now,86400000,1000))return error('The AI Walk has reached today’s service limit. Use the website editor or return later.',429,'daily_limit');
-      }
       if(path==='/api/ai-walk/review'){const result=await reviewDraft(env,access.registration_id,input,now,{fetcher:modelFetch});return json(result.body,result.status);}
       if(path==='/api/ai-walk/complete')return await completeAIWalk(env,access.registration_id,input,now);
       if(path!=='/api/ai-walk')return error('Use the correct action.',405,'method_not_allowed');

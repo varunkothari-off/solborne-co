@@ -28,6 +28,16 @@ Deployment is manual with the owner's authenticated Wrangler account and the exi
 
 ## Evidence boundaries
 
-The owner workspace passed 127 local tests. Live consent testing observed zero Google requests before opt-in, then a Google tag HTTP 200 and collection HTTP 204 afterward. A collection response does not establish Google report processing or search rankings. Indexing, real-phone behaviour and campaign outcomes are separate checks.
+The owner workspace runs the full local suite before each release; current counts and receipts are recorded in the release flight report. Live consent testing observed zero Google requests before opt-in, then a Google tag HTTP 200 and collection HTTP 204 afterward. A collection response does not establish Google report processing or search rankings. Indexing, real-phone behaviour and campaign outcomes are separate checks.
 
 Reused assets retain their source notices: MIT Bootstrap, OFL fonts, and the HTML5 UP licences/credits on older pages and applicable generated customer templates. See `docs/studio-design-sources.md`.
+
+## Runtime and recovery
+
+The live conversation uses the grounded Argon adapter; Gemini Live transcription is separately gated by `GEMINI_LIVE_TRANSCRIPTION_ENABLED`. Audio consent and explicit transcript review/send are required. The browser capture limit is one minute; direct-provider token restrictions are separate. No audio recordings are stored in Solborne databases.
+
+Browser document misses receive the branded404 with an actual404 status; API and machine requests retain JSON errors. Account pages show a delayed, non-blocking session loading indicator. `/loading.html` is an explicitly labelled visual preview, not a mandatory splash route.
+
+Only eligible, leased AI work reserves shared daily model units. Invalid attempts have their own rate limiter. Do not add shared-provider charges in routing before validation.
+
+Database schema files live in `drizzle/`; database changes are managed separately from site deployment. `wrangler d1 migrations list` is not configured as the source of migration truth. A deployment must not bootstrap or migrate the production database. Private owner queue snapshots/exports live under ignored `private-owner/`.

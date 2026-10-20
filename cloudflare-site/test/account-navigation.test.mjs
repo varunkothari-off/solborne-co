@@ -37,3 +37,7 @@ test('private journey pages share logo, navigation and footer, and canvas keeps 
  }
  const canvas=source('canvas.html');assert.match(canvas,/Take the Walk of Fame/);assert.match(canvas,/website files are free to keep/);assert.match(canvas,/class="another-business"/);assert.doesNotMatch(canvas,/<button id="signout"/);
 });
+
+test('session loader follows the shared request lifecycle on success and failure',async()=>{
+ for(const fail of [false,true]){let begun=0,finished=0;const context=vm.createContext({window:{SolborneLoading:{begin(){begun++;return ()=>finished++;}}},fetch:async()=>{if(fail)throw Error('Offline');return {ok:true,json:async()=>({authenticated:false})};},Error});vm.runInContext(source('auth-session.js'),context);if(fail)await assert.rejects(context.window.solborneSession(),/Offline/);else await context.window.solborneSession();assert.equal(begun,1);assert.equal(finished,1);}
+});
