@@ -7,7 +7,7 @@ async function page({registered=false,enabled=false,ready=false}={}){
  const node=()=>({textContent:'',children:[],handlers:{},disabled:false,checked:false,hidden:false,setAttribute(){},addEventListener(k,f){this.handlers[k]=f;},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},querySelector(){return this.link ||=node();},scrollIntoView(){}});
  const nodes=new Map([...html.matchAll(/id="([^"]+)"/g)].map(([,id])=>[id,node()]));let requests=[];
  const state={facts:{businessName:'Synthetic business'},messages:[],ready,businessBrief:{}};
- vm.runInNewContext(source,{Intl,console,document:{getElementById:id=>nodes.get(id)||null,createElement:node},window:{solborneSession:async()=>({authenticated:registered,registered,csrf:'csrf'})},matchMedia:()=>({matches:true}),fetch:async(url,options)=>{requests.push({url,options});return Response.json({ok:true,enabled,state:url.endsWith('/submit')?{...state,submission:{id:'WB-test',submittedAt:1,dueAt:86400001}}:state,revision:1});}});
+ vm.runInNewContext(source,{Intl,console,document:{getElementById:id=>nodes.get(id)||null,createElement:node},window:{solborneSession:async()=>({authenticated:registered,registered,csrf:'csrf'})},matchMedia:()=>({matches:true}),fetch:async(url,options)=>{requests.push({url,options});return Response.json({ok:true,csrf:'form-csrf',enabled,state:url.endsWith('/submit')?{...state,submission:{id:'WB-test',submittedAt:1,dueAt:86400001}}:state,revision:1});}});
  await new Promise(resolve=>setImmediate(resolve));return {nodes,html,requests};
 }
 test('actual conversation page boots signed out, offers sign-in and cannot send',async()=>{
@@ -15,5 +15,5 @@ test('actual conversation page boots signed out, offers sign-in and cannot send'
 });
 test('ready summary needs explicit confirmation and submission renders a receipt without a website',async()=>{
  const p=await page({registered:true,enabled:true,ready:true});assert.equal(p.nodes.get('ai-submit-brief').disabled,true);p.nodes.get('ai-confirm').checked=true;p.nodes.get('ai-confirm').handlers.change();assert.equal(p.nodes.get('ai-submit-brief').disabled,false);
- await p.nodes.get('ai-submit-brief').handlers.click();assert.equal(p.nodes.get('ai-submitted').hidden,false);assert.equal(p.nodes.get('ai-answer-form').hidden,true);assert.match(p.nodes.get('ai-receipt').textContent,/WB-test/);assert.equal(p.requests.filter(r=>r.url.endsWith('/submit')).length,1);assert(!p.requests.some(r=>/preview|complete/.test(r.url)));
+ await p.nodes.get('ai-submit-brief').handlers.click();assert.equal(p.nodes.get('ai-submitted').hidden,false);assert.equal(p.nodes.get('ai-answer-form').hidden,true);assert.match(p.nodes.get('ai-receipt').textContent,/WB-test/);assert.equal(p.requests.filter(r=>r.url.endsWith('/submit')).length,1);assert.equal(JSON.parse(p.requests.find(r=>r.url.endsWith('/submit')).options.body).csrf,'form-csrf');assert(!p.requests.some(r=>/preview|complete/.test(r.url)));
 });
