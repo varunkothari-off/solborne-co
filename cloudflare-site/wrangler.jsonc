@@ -10,6 +10,7 @@
     "AI_WALK_ENABLED": "true",
     "AI_WEBSITE_BUILD_ENABLED": "false",
     "GEMINI_MODEL": "gemini-4-argon",
+    "GEMINI_LIVE_TRANSCRIPTION_ENABLED": "true",
     "SUPABASE_URL": "https://jzbbvlmfsatjqgfubhon.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_NmJeO2UBhZxIvBGNYv2Q4w_XtEx8ZnO",
     "AUTH_ENABLED": "true",
