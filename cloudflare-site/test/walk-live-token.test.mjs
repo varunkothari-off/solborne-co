@@ -5,7 +5,7 @@ test('Live credentials are single-use, short-lived and locked to transcription o
  let payload,endpoint,headers;const now=Date.now();
  const result=await createLiveToken({GEMINI_API_KEY:'PRIVATE_SERVER_KEY'},{now,fetcher:async(url,options)=>{endpoint=url;payload=JSON.parse(options.body);headers=options.headers;return Response.json({name:'auth_tokens/one-use-token'});}});
  assert.equal(endpoint,'https://generativelanguage.googleapis.com/v1beta/auth_tokens');assert.equal(headers['x-goog-api-key'],'PRIVATE_SERVER_KEY');
- assert.equal(payload.uses,1);assert.equal(Date.parse(payload.expireTime)-now,120000);assert.equal(Date.parse(payload.newSessionExpireTime)-now,60000);
+ assert.equal(payload.uses,1);assert.equal(Date.parse(payload.expireTime)-now,1800000);assert.equal(Date.parse(payload.newSessionExpireTime)-now,60000);
  assert.equal(payload.bidiGenerateContentSetup.model,'models/'+LIVE_MODEL);assert.deepEqual(payload.bidiGenerateContentSetup.generationConfig.responseModalities,['TEXT']);assert.ok(payload.bidiGenerateContentSetup.inputAudioTranscription);
  assert.equal(result.token,'auth_tokens/one-use-token');assert.equal(JSON.stringify(result).includes('PRIVATE_SERVER_KEY'),false);assert.equal(result.model,LIVE_MODEL);
 });

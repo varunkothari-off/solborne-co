@@ -145,3 +145,5 @@ test('two-call review reserves shared units atomically and releases its lease wh
  assert.equal(provider,0);assert.equal(f.db.sql.prepare("SELECT count FROM solborne_rate_limits WHERE key LIKE 'ai-walk-global:%'").get().count,999);
  const row=f.db.sql.prepare('SELECT calls,busy_until FROM solborne_ai_walks').get();assert.equal(row.calls,before);assert.equal(row.busy_until,0);
 });
+
+test('long owner answers survive intact while oversized transport remains bounded',async t=>{const f=fixture(t),s=await register(f);const message='Detailed business context. '.repeat(500);assert.equal((await answer(f,s,{message})).status,200);const saved=JSON.parse(f.db.sql.prepare('SELECT state_json FROM solborne_ai_walks').get().state_json);assert.equal(saved.messages.find(m=>m.role==='user').text,message);let calls=0;f.setFetch(async()=>{calls++;throw Error('No provider call');});assert.equal((await answer(f,s,{revision:1,message:'x'.repeat(270000)})).status,413);assert.equal(calls,0);});

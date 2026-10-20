@@ -1,6 +1,6 @@
 import {aiFields} from './ai-walk-fields.mjs';
 import {businessBriefFields} from './walk-meta-prompt.mjs';
-export const VERSION='walk-v6-grounded-conversational-20261020';
+export const VERSION='walk-v6-grounded-conversational-answer-help-20261021';
 export const PROMPT=`You are the interviewer for Solborne & Co.'s Walk of Fame. Understand THIS business well enough for a distinct, useful business website and a needs-led automation proposal. You have no research, calling, lender, publishing or website-generation tools. All you can do is interview and prepare a private handoff. Never claim work outside this conversation occurred.
 
 INTERVIEW, DON'T PROCESS A FORM
@@ -38,14 +38,18 @@ Each business deserves its own audience/marketing/pain-point research, industry-
 Agree a complete usable static portfolio (one or several pages as content needs), public contact links and one consolidated wording/colour/image revision. Hosting, domain and ongoing work are separate unless specifically agreed. Automations, calling, document processing, CRM, booking and payment are optional paid work based on the confirmed need, not part of the free static website. Never claim those features are active. Only private proposals may show clearly labelled disabled paid ideas; keep them out of the final free public site. For Solborne itself, genuine implemented services stay functional. Don't turn an optional business canvas into a compulsory gateway.
 No immediate generated site: after confirmation/submission Solborne's team researches, designs, and manually reviews every website before sending a private link within 24 hours. Do not claim this handoff already occurred or that KFS's own lending services share Solborne's 24-hour website promise. Owner corrections govern the offer; do not revive an old seven-day expiry when superseded. A ready brief is for HUMAN REVIEW, never certification or permission to publish.
 
+OPTIONAL ANSWER HELP (separate from the interview)
+Alongside your one question, supply answerIdeas: zero to three concise, selectable drafts that help the owner answer THAT SAME decision. When useful, offer two or three meaningfully different possible directions; when the answer cannot safely be inferred, offer a short fill-in framework or a way to ask for help. An empty array is better than irrelevant suggestions. Keep each <=240 characters, normally much shorter. These are optional starting points, not predictions, confirmed decisions or owner evidence. Do not invent prices, performance metrics, qualifications, permissions, identities or personal/business facts. Do not suggest unconfirmed guarantees, turnaround times, service-level promises or policies as ready-made claims. When proposing specific services or directions not yet confirmed, prefix the draft with "For example:" or use a fill-in framework so its hypothetical status stays visible in the answer box. Never phrase an unconfirmed specific as an assumed first-person fact. Do not ask additional questions inside answerIdeas. Do not include suggestions in updates, evidence, readiness or ownerMessages. Only a later owner-sent answer can provide evidence. The owner can select, edit or ignore them; selecting is not submission or agreement. Return [] when there is no question or the brief is ready. Do not change the questioning, grounding or handoff rules to produce these helpers.
+
 OUTPUT
 Use compact, plain text. message <=280 characters, question <=240, at most 18 changed fields and 10 short unresolved labels. Don't write a list of questions in message. Use the schema allowlists; field lengths are upper bounds, not writing targets. Aim for short usable summaries (normally <350 characters per field). Track unproven decisions in unresolved and private researchQuestions. stage describes the current topic. ready=true only when sufficient grounded public identity/contact/offer and private journey/priority/success/approval/free-scope facts exist; never fill missing fields to reach ready. If material facts remain unclear ask the next useful question. Human review can still have research/licensing gaps clearly flagged. ready does not mean the public website or automation is finished.`;
 const str=maxLength=>({type:'string',maxLength});
 const stages=['business','audience','offer','operations','priority','brand','proof','disclosures','review'];
 export const topics=['offer','audience','customer_trigger','difference','service_journey','payment','trust','priority','success','brand','public_identity','sector_role','call_to_action','data_handling','retention','website_scope','other','handoff'];
 export const schema={type:'object',additionalProperties:false,properties:{message:str(280),question:str(240),updates:{type:'array',maxItems:18,items:{type:'object',additionalProperties:false,properties:{target:{type:'string',enum:['facts','businessBrief']},field:{type:'string',enum:[...new Set([...Object.keys(aiFields),...Object.keys(businessBriefFields)])]},value:str(1000),sourceTurn:{type:'integer',minimum:1},quote:str(450),kind:{type:'string',enum:['owner_stated','hypothesis','deferred']}},required:['target','field','value','sourceTurn','quote','kind']}},unresolved:{type:'array',maxItems:10,items:str(100)},ready:{type:'boolean'},stage:{type:'string',enum:stages}},required:['message','question','updates','unresolved','ready','stage']};
+schema.properties.answerIdeas={type:'array',maxItems:3,items:str(240),description:'Optional starting points for answering the current question; not owner evidence. Use [] when no helpful draft is safe.'};
 schema.properties.nextTopic={type:'string',enum:topics,description:'The ONE primary topic the follow-up question asks about; handoff if no question. Used for offline replay routing.'};schema.required.push('nextTopic');
-export const initialState=()=>({facts:{},businessBrief:{},ownerMessages:[],messages:[],evidence:{},missing:[],ready:false,unresolved:[],stage:'business',promptVersion:VERSION});
+export const initialState=()=>({facts:{},businessBrief:{},ownerMessages:[],messages:[],answerIdeas:[],evidence:{},missing:[],ready:false,unresolved:[],stage:'business',promptVersion:VERSION});
 const norm=s=>s.normalize('NFKC').replace(/\s+/g,' ').trim().toLowerCase();
 const identityNorm=s=>norm(s).replace(/[^\p{L}\p{N}]/gu,'');
 function sourceMatches(text,quote){
@@ -86,12 +90,14 @@ function recoverQuestion(next,missing,history){
  const gap=ordered.find(x=>gapQuestions[x.split('.').at(-1)]&&!recent.some(h=>similarQuestion(h.question,gapQuestions[x.split('.').at(-1)][2])))||ordered[0];
  const item=gapQuestions[gap?.split('.').at(-1)]||['review','other','What would you like to clarify before reviewing your draft?'];
  next.message='We can keep the unanswered detail open and continue with the next useful step.';
- [next.stage,next.nextTopic,next.question]=item;next.questionRecovery=true;
+ [next.stage,next.nextTopic,next.question]=item;next.answerIdeas=[];next.questionRecovery=true;
 }
 export function applyReply(state,reply){
  for(const [key,max] of [['message',280],['question',240]])if(typeof reply?.[key]!=='string'||reply[key].length>max)throw Error('Invalid '+key);
  if(!topics.includes(reply.nextTopic)||!stages.includes(reply.stage)||typeof reply.ready!=='boolean'||!Array.isArray(reply.updates)||reply.updates.length>18||!Array.isArray(reply.unresolved)||reply.unresolved.length>10||reply.unresolved.some(x=>typeof x!=='string'||x.length>100))throw Error('Invalid reply contract');
- const next={...structuredClone(state),message:reply.message,question:reply.question,nextTopic:reply.nextTopic,stage:reply.stage,unresolved:reply.unresolved,promptVersion:VERSION};const blocked=[];
+ const answerIdeas=reply.answerIdeas===undefined?[]:reply.answerIdeas;
+ if(!Array.isArray(answerIdeas)||answerIdeas.length>3||answerIdeas.some(x=>typeof x!=='string'||!x.trim()||x.length>240))throw Error('Invalid answer ideas');
+ const next={...structuredClone(state),answerIdeas:answerIdeas.map(x=>x.trim()),message:reply.message,question:reply.question,nextTopic:reply.nextTopic,stage:reply.stage,unresolved:reply.unresolved,promptVersion:VERSION};const blocked=[];
  for(const original of reply.updates){
   const source=state.ownerMessages.find(x=>x.id===original.sourceTurn);
   const u=source&&typeof original.value==='string'?canonicalIdentity(original,source.text):original;
@@ -114,6 +120,7 @@ export function applyReply(state,reply){
  next.questionRecovery=false;
  if(!next.ready&&missing.length&&(reply.ready||reply.nextTopic==='handoff'||!reply.question||/\b(?:is ready|all set|completed|ready to submit)\b/i.test(reply.message)))recoverQuestion(next,missing,history);
  else if(reply.question&&history.filter(x=>similarQuestion(x.question,reply.question)).length>=2)recoverQuestion(next,missing,history);
+ if(next.ready||!next.question)next.answerIdeas=[];
  next.questionHistory=[...history.filter(x=>x?.question).map(x=>({question:x.question,nextTopic:x.nextTopic})),{question:next.question,nextTopic:next.nextTopic}].slice(-40);
  return {state:next,blocked};
 }
@@ -153,6 +160,6 @@ export async function generateGroundedArgonReply(env,state,message,{fetcher=fetc
  const data=JSON.parse(await readBoundedResponse(response));
  const text=data.candidates?.[0]?.content?.parts?.filter(p=>!p.thought).map(p=>p.text||'').join('');
  const {state:next}=applyReply(draft,JSON.parse(text));
- const reply={message:next.message,question:next.question,facts:next.facts,businessBrief:next.businessBrief,template:['editorial','story'].includes(state.template)?state.template:'editorial',stage:next.stage,missing:next.missing,ready:next.ready,promptVersion:VERSION,ownerMessages:next.ownerMessages,evidence:next.evidence,questionHistory:next.questionHistory,lastBlocked:next.lastBlocked,questionRecovery:next.questionRecovery,nextTopic:next.nextTopic,unresolved:next.unresolved};
+ const reply={message:next.message,question:next.question,answerIdeas:next.answerIdeas,facts:next.facts,businessBrief:next.businessBrief,template:['editorial','story'].includes(state.template)?state.template:'editorial',stage:next.stage,missing:next.missing,ready:next.ready,promptVersion:VERSION,ownerMessages:next.ownerMessages,evidence:next.evidence,questionHistory:next.questionHistory,lastBlocked:next.lastBlocked,questionRecovery:next.questionRecovery,nextTopic:next.nextTopic,unresolved:next.unresolved};
  return {reply,usage:{input:Number(data.usageMetadata?.promptTokenCount)||0,output:Number(data.usageMetadata?.candidatesTokenCount)||0,thinking:Number(data.usageMetadata?.thoughtsTokenCount)||0}};
 }

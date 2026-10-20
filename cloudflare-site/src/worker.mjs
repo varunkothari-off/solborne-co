@@ -140,7 +140,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
         return json({ok:true,enabled:providerReady(env),state,revision:row?.revision||0,...(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true'?{voiceMode:'live'}:{})});
       }
       if(!validOrigin(request,env))return error('Open the Walk directly and try again.',403,'origin_required');
-      const input=await readJson(request,path==='/api/ai-walk/transcribe'?MAX_AUDIO_BODY:8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');
+      const input=await readJson(request,path==='/api/ai-walk/transcribe'?MAX_AUDIO_BODY:path==='/api/ai-walk'?262144:8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');
       if(path==='/api/ai-walk/live-token'){
         if(request.method!=='POST')return error('Use the correct action.',405,'method_not_allowed');
         if(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED!=='true'||!providerReady(env))return error('Live transcription is not enabled.',503,'live_voice_disabled');

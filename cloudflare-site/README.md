@@ -41,3 +41,10 @@ Browser document misses receive the branded404 with an actual404 status; API and
 Only eligible, leased AI work reserves shared daily model units. Invalid attempts have their own rate limiter. Do not add shared-provider charges in routing before validation.
 
 Database schema files live in `drizzle/`; database changes are managed separately from site deployment. `wrangler d1 migrations list` is not configured as the source of migration truth. A deployment must not bootstrap or migrate the production database. Private owner queue snapshots/exports live under ignored `private-owner/`.
+
+### Walk input polish (21 October 2026)
+Live transcription writes directly into the editable answer. One mic/WS session is reused across explicit turns; pause/send disables capture and suspends audio, while Disconnect/withdrawal/page exit releases it. No one-minute live recording or 2,000-character answer limit. Requests retain a 256 KiB abuse/resource bound. Ephemeral credentials remain single-use, model-restricted, with a 60-second connection window and 30-minute expiry. Provider/network disconnects preserve draft text but may require a new mic click.
+
+Privacy choices use the versioned `solborne.walk-privacy.v1:<active-registration>` browser key, with separate AI/audio choices and the existing optional analytics key. No analytics tag is added to the private Walk. Reuse this purpose-specific, revisable pattern in future sites; never copy consent across brands, new purposes or browser microphone permissions. A future purpose change requires a new notice/version.
+
+Argon answer ideas are optional, unconfirmed drafts. Selecting appends editable text and never sends or updates owner facts automatically. The core discovery rules remain intact. Submitted briefs remain awaiting manual review; there is no automatic website publication.

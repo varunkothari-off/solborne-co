@@ -80,7 +80,7 @@ export async function reviewDraft(env,registration,input,now,{fetcher=fetch}={})
 export async function answerDraft(env,registration,input,now,{fetcher=fetch}={}){
   if(!providerReady(env))return {status:503,body:{ok:false,code:'provider_not_connected',error:'The guided AI Walk is waiting for its provider connection. Your existing Walk remains available.'}};
   if(input?.consent!==true)return {status:422,body:{ok:false,error:'Agree to AI processing of your business brief before starting.'}};
-  if(typeof input.message!=='string'||!input.message.trim()||input.message.length>2000||!Number.isSafeInteger(input.revision)||input.revision<0)return {status:422,body:{ok:false,error:'Enter an answer of up to 2,000 characters and refresh your saved progress.'}};
+  if(typeof input.message!=='string'||!input.message.trim()||!Number.isSafeInteger(input.revision)||input.revision<0)return {status:422,body:{ok:false,error:'Enter your answer and refresh your saved progress.'}};
   await run(env,'INSERT OR IGNORE INTO solborne_ai_walks (registration_id,state_json,created_at,updated_at) VALUES (?,?,?,?)',[registration,JSON.stringify(initialState()),now,now]);
   const {row,state}=await loadDraft(env,registration);
   if(row.revision!==input.revision)return {status:409,body:{ok:false,error:'Your Walk changed in another tab. Refresh the conversation before sending again.'}};
