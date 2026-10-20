@@ -4,7 +4,7 @@ import { database, first, all, run, rateLimit, cleanup } from './db.mjs';
 import { privateAssets } from './private-assets.generated.mjs';
 import { validateWebsiteInterview, createWebsiteFiles } from './website.mjs';
 import { assets } from './assets.generated.mjs';
-import { providerReady, loadDraft, answerDraft, reviewDraft } from './ai-walk.mjs';
+import { providerReady, loadDraft, answerDraft, reviewDraft, submitBrief } from './ai-walk.mjs';
 import { renderAIPortfolio, approvedClassicFacts } from './ai-portfolio.mjs';
 
 const CONSENT_VERSION = 'solborne-public-intake-v1';
@@ -121,7 +121,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     const authResponse=await authRoute(request,env,now,{fetcher:authFetch});if(authResponse)return authResponse;
     if(['GET','HEAD'].includes(request.method)&&['/index.html','/improve.html'].includes(path))return new Response(null,{status:301,headers:{...safeHeaders,Location:(path==='/index.html'?'/':'/websites.html')+url.search,'Cache-Control':'no-cache'}});
     if(path==='/api/ai-walk/status'&&request.method==='GET')return json({ok:true,enabled:providerReady(env)});
-    if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
+    if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete','/api/ai-walk/submit'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
       if(!await intakeReady(env))return error('The Walk is temporarily unavailable.',503,'registration_unavailable');
       const access=await accessFor(request,env,now);if(!access)return error('Save your basic details first.',403,'registration_required');
       if(['/api/ai-walk/preview','/api/ai-walk/complete'].includes(path)&&env.AI_WEBSITE_BUILD_ENABLED!=='true')return error('Website preparation follows team research and design approval. This Walk saves your business brief only.',503,'manual_design_required');
@@ -134,6 +134,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
       if(!validOrigin(request,env))return error('Open the Walk directly and try again.',403,'origin_required');
       const input=await readJson(request,8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');
       if(request.method==='DELETE'){if(path!=='/api/ai-walk')return error('Use the correct action.',405,'method_not_allowed');const {row}=await loadDraft(env,access.registration_id);if(row?.busy_until>now)return error('Wait for the current operation before deleting this conversation.',409,'busy');await run(env,'DELETE FROM solborne_ai_walks WHERE registration_id=?',[access.registration_id]);return json({ok:true,deleted:true});}
+      if(path==='/api/ai-walk/submit'){const result=await submitBrief(env,access.registration_id,input,now);return json(result.body,result.status);}
       if(!await rateLimit(env,'ai-walk:'+access.registration_id,now,900000,20))return error('Too many answers at once. Please continue shortly.',429,'rate_limited');
       if(['/api/ai-walk','/api/ai-walk/review'].includes(path)){
         const calls=path.endsWith('/review')?2:1;
@@ -154,6 +155,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     if(path.startsWith('/downloads/')&&(request.method==='GET'||request.method==='HEAD'))return await download(request,env,now,authFetch);
     if(path.startsWith('/api/'))return error('This operation is not supported.',405,'method_not_allowed');
     if(request.method!=='GET'&&request.method!=='HEAD')return error('This operation is not supported.',405,'method_not_allowed',{'Allow':'GET, HEAD'});
+    if(env.AI_WALK_ENABLED==='true'&&['/walk','/walk/','/walk.html'].includes(path))return new Response(null,{status:302,headers:{...safeHeaders,...noStore,Location:'/ai-walk.html'}});
     return await serveAsset(request,path);
   } catch(cause) {
     if(cause instanceof FormError)return error(cause.message,cause.status);

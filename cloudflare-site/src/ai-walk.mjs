@@ -27,7 +27,7 @@ export async function generateReply(env,state,message,{fetcher=fetch}={}){
   if(!['gemini-3.1-flash-lite','gemini-2.5-flash-lite','gemini-4-argon'].includes(model))throw new Error('Unsupported model');
   const transcript=state.messages.slice(-12).map(x=>`${x.role}: ${x.text}`).join('\n');
   const properties=Object.fromEntries(Object.keys(aiFields).map(k=>[k,{type:'string'}]));
-  const payload={systemInstruction:{parts:[{text:prompt}]},contents:[{role:'user',parts:[{text:JSON.stringify({facts:state.facts,businessBrief:state.businessBrief||{},template:state.template,promptVersion:WALK_PROMPT_VERSION,transcript,review:state.review,answer:message})}]}],generationConfig:{temperature:0.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{message:{type:'string'},question:{type:'string'},facts:{type:'object',properties},businessBrief:{type:'object',properties:Object.fromEntries(Object.keys(businessBriefFields).map(k=>[k,{type:'string'}]))},missing:{type:'array',items:{type:'string'}},ready:{type:'boolean'},template:{type:'string',enum:['editorial','story']},stage:{type:'string',enum:[...stages]}},required:['message','question','facts','businessBrief','missing','ready','template','stage']}}};
+  const payload={systemInstruction:{parts:[{text:prompt}]},contents:[{role:'user',parts:[{text:JSON.stringify({facts:state.facts,businessBrief:state.businessBrief||{},template:state.template,promptVersion:WALK_PROMPT_VERSION,transcript,review:state.review,answer:message})}]}],generationConfig:{temperature:0.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{message:{type:'string'},question:{type:'string'},facts:{type:'object',properties,required:Object.keys(aiFields)},businessBrief:{type:'object',properties:Object.fromEntries(Object.keys(businessBriefFields).map(k=>[k,{type:'string'}])),required:Object.keys(businessBriefFields)},missing:{type:'array',items:{type:'string'}},ready:{type:'boolean'},template:{type:'string',enum:['editorial','story']},stage:{type:'string',enum:[...stages]}},required:['message','question','facts','businessBrief','missing','ready','template','stage']}}};
   const response=await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify(payload),signal:AbortSignal.timeout(45000)});
   if(!response.ok)throw new Error('Model temporarily unavailable');
   const raw=await response.text();if(raw.length>100000)throw new Error('Reply too large');
@@ -74,6 +74,7 @@ export async function answerDraft(env,registration,input,now,{fetcher=fetch}={})
   await run(env,'INSERT OR IGNORE INTO solborne_ai_walks (registration_id,state_json,created_at,updated_at) VALUES (?,?,?,?)',[registration,JSON.stringify(initialState()),now,now]);
   const {row,state}=await loadDraft(env,registration);
   if(row.revision!==input.revision)return {status:409,body:{ok:false,error:'Your Walk changed in another tab. Refresh the conversation before sending again.'}};
+  if(state.submission)return {status:409,body:{ok:false,error:'Your brief is with our team. Contact varun@getsolborne.com to add a correction.'}};
   if(row.calls>=40)return {status:429,body:{ok:false,error:'This Walk has reached its model-call limit. Review your brief or contact Solborne.'}};
   const claim=await run(env,'UPDATE solborne_ai_walks SET busy_until=?,calls=calls+1 WHERE registration_id=? AND revision=? AND busy_until<=? AND calls<40',[now+60000,registration,input.revision,now]);
   if(!(claim.meta?.changes>=1))return {status:409,body:{ok:false,error:'An answer is already being processed. Refresh your saved conversation shortly.'}};
@@ -87,4 +88,17 @@ export async function answerDraft(env,registration,input,now,{fetcher=fetch}={})
     await run(env,'UPDATE solborne_ai_walks SET busy_until=0 WHERE registration_id=? AND revision=? AND busy_until=?',[registration,input.revision,now+60000]);
     return {status:502,body:{ok:false,error:'The AI could not finish that answer. Your saved progress is unchanged. Retry once or use the existing Walk.'}};
   }
+}
+// Interview handoff only. This never creates website files or grants release access.
+export async function submitBrief(env,registration,input,now){
+  const {row,state}=await loadDraft(env,registration);
+  if(input?.confirmed!==true)return {status:422,body:{ok:false,error:'Confirm your business summary before sending it to our team.'}};
+  if(state.submission)return {status:200,body:{ok:true,state,revision:row.revision,replayed:true}};
+  if(!row||!state.ready||row.revision!==input.revision)return {status:422,body:{ok:false,error:'Finish the conversation and check the latest summary before sending.'}};
+  if(row.busy_until>now)return {status:409,body:{ok:false,error:'Wait for the current answer to finish, then send your brief.'}};
+  const submission={id:'WB-'+crypto.randomUUID(),submittedAt:now,dueAt:now+24*60*60*1000,status:'awaiting_manual_review',confirmedRevision:row.revision};
+  const next={...state,submission};
+  const saved=await run(env,'UPDATE solborne_ai_walks SET state_json=?,revision=revision+1,updated_at=? WHERE registration_id=? AND revision=? AND busy_until<=?',[JSON.stringify(next),now,registration,row.revision,now]);
+  if(!(saved.meta?.changes>=1))return {status:409,body:{ok:false,error:'Your summary changed. Refresh it before sending.'}};
+  return {status:201,body:{ok:true,state:next,revision:row.revision+1}};
 }
