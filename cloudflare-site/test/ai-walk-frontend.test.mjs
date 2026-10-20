@@ -2,15 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-
-test('actual interview page boots while disconnected without missing controls or a stuck checking state',async()=>{
+async function page({registered=false,enabled=false,ready=false}={}){
  const html=readFileSync('public/ai-walk.html','utf8'),source=readFileSync('public/ai-walk.js','utf8');
- const nodes=new Map([...html.matchAll(/id="([^"]+)"/g)].map(([,id])=>[id,{textContent:'',disabled:false,checked:false,hidden:false,setAttribute(){},addEventListener(){}}]));
- const sandbox={crypto,Blob,URL,console,document:{getElementById:id=>nodes.get(id)||null},fetch:async url=>url==='/api/ai-walk/status'?new Response(JSON.stringify({ok:true,enabled:false}),{headers:{'Content-Type':'application/json'}}):new Response('{}',{status:403})};
- vm.runInNewContext(source,sandbox);
- await new Promise(resolve=>setImmediate(resolve));
- assert.match(nodes.get('ai-availability').textContent,/being configured/);
- assert.equal(nodes.get('ai-send').disabled,true);
- assert.equal(nodes.get('ai-export-brief').disabled,true);
- assert.match(html,/<div id="ai-legacy-builder" hidden>/);
+ const node=()=>({textContent:'',children:[],handlers:{},disabled:false,checked:false,hidden:false,setAttribute(){},addEventListener(k,f){this.handlers[k]=f;},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},querySelector(){return this.link ||=node();},scrollIntoView(){}});
+ const nodes=new Map([...html.matchAll(/id="([^"]+)"/g)].map(([,id])=>[id,node()]));let requests=[];
+ const state={facts:{businessName:'Synthetic business'},messages:[],ready,businessBrief:{}};
+ vm.runInNewContext(source,{Intl,console,document:{getElementById:id=>nodes.get(id)||null,createElement:node},window:{solborneSession:async()=>({authenticated:registered,registered,csrf:'csrf'})},matchMedia:()=>({matches:true}),fetch:async(url,options)=>{requests.push({url,options});return Response.json({ok:true,enabled,state:url.endsWith('/submit')?{...state,submission:{id:'WB-test',submittedAt:1,dueAt:86400001}}:state,revision:1});}});
+ await new Promise(resolve=>setImmediate(resolve));return {nodes,html,requests};
+}
+test('actual conversation page boots signed out, offers sign-in and cannot send',async()=>{
+ const p=await page();assert.match(p.nodes.get('ai-availability').textContent,/Sign in/);assert.equal(p.nodes.get('ai-send').disabled,true);assert.equal(p.nodes.get('ai-submit-brief').disabled,true);assert.equal(p.nodes.get('ai-register').hidden,false);assert(!p.html.includes('ai-preview-frame'));assert.match(p.html,/Within 24 hours/);
+});
+test('ready summary needs explicit confirmation and submission renders a receipt without a website',async()=>{
+ const p=await page({registered:true,enabled:true,ready:true});assert.equal(p.nodes.get('ai-submit-brief').disabled,true);p.nodes.get('ai-confirm').checked=true;p.nodes.get('ai-confirm').handlers.change();assert.equal(p.nodes.get('ai-submit-brief').disabled,false);
+ await p.nodes.get('ai-submit-brief').handlers.click();assert.equal(p.nodes.get('ai-submitted').hidden,false);assert.equal(p.nodes.get('ai-answer-form').hidden,true);assert.match(p.nodes.get('ai-receipt').textContent,/WB-test/);assert.equal(p.requests.filter(r=>r.url.endsWith('/submit')).length,1);assert(!p.requests.some(r=>/preview|complete/.test(r.url)));
 });

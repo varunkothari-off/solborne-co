@@ -7,7 +7,8 @@
   "preview_urls": false,
   "vars": {
     "SITE_ORIGIN": "https://solborne.in",
-    "AI_WALK_ENABLED": "false",
+    "AI_WALK_ENABLED": "true",
+    "AI_WEBSITE_BUILD_ENABLED": "false",
     "GEMINI_MODEL": "gemini-3.1-flash-lite",
     "SUPABASE_URL": "https://jzbbvlmfsatjqgfubhon.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_NmJeO2UBhZxIvBGNYv2Q4w_XtEx8ZnO",

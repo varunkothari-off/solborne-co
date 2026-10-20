@@ -51,8 +51,31 @@ test('runtime carries persistent private discovery separately and uses versioned
   const context=JSON.parse(sent.payload.contents[0].parts[0].text);
   assert.equal(context.businessBrief.currentOperations,'PRIVATE_SYNTHETIC_PROCESS');
   assert.equal(context.facts.currentOperations,undefined);
-  assert.equal(result.reply.promptVersion,'solborne-business-walk-v2-20261016');
+  assert.equal(result.reply.promptVersion,'solborne-conversational-walk-v3-20261020');
   assert.ok(sent.payload.generationConfig.responseJsonSchema.required.includes('businessBrief'));
 });
 
 test('interview-only launch blocks legacy website generation even after reviews',async t=>{const f=fixture(t),s=await register(f);delete f.env.AI_WEBSITE_BUILD_ENABLED;await answer(f,s);let calls=0;f.setFetch(async()=>{calls++;throw Error('must not call');});const preview=await f.call('/api/ai-walk/preview',{headers:{Cookie:s.cookie}});assert.equal(preview.status,503);assert.equal((await preview.json()).code,'manual_design_required');const complete=await post(f,s,'/api/ai-walk/complete',{csrf:s.csrf,revision:1,ownerApproved:true,idempotencyKey:key()});assert.equal(complete.status,503);assert.equal(f.db.sql.prepare('SELECT count(*) n FROM solborne_walk_completions').get().n,0);assert.equal(calls,0);});
+
+test('confirmed conversational brief saves a 24-hour handoff without creating or releasing a website',async t=>{
+ const f=fixture(t),s=await register(f);delete f.env.AI_WEBSITE_BUILD_ENABLED;await answer(f,s);
+ let providerCalls=0;f.setFetch(async()=>{providerCalls++;throw Error('No provider on submission');});
+ const payload={csrf:s.csrf,revision:1,confirmed:true};
+ const saved=await post(f,s,'/api/ai-walk/submit',payload);assert.equal(saved.status,201);const body=await saved.json();
+ assert.equal(body.state.submission.dueAt-body.state.submission.submittedAt,86400000);assert.equal(body.state.submission.status,'awaiting_manual_review');
+ assert.equal(f.db.sql.prepare('SELECT count(*) n FROM solborne_walk_completions').get().n,0);assert.equal(f.db.sql.prepare('SELECT count(*) n FROM solborne_website_releases').get().n,0);assert.equal(providerCalls,0);
+ const replay=await post(f,s,'/api/ai-walk/submit',payload);assert.equal(replay.status,200);assert.equal((await replay.json()).state.submission.id,body.state.submission.id);
+ assert.equal((await answer(f,s,{revision:2})).status,409);
+ assert(f.db.sql.prepare('SELECT sequence FROM solborne_presales_outbox').get().sequence>1);
+});
+test('handoff requires owned access, CSRF, confirmation and a current complete brief',async t=>{
+ const f=fixture(t),s=await register(f);await answer(f,s);
+ assert.equal((await post(f,s,'/api/ai-walk/submit',{csrf:s.csrf,revision:1,confirmed:false})).status,422);
+ assert.equal((await post(f,s,'/api/ai-walk/submit',{csrf:'x',revision:1,confirmed:true})).status,403);
+ assert.equal((await post(f,s,'/api/ai-walk/submit',{csrf:s.csrf,revision:0,confirmed:true})).status,422);
+ const other=await register(f,'synthetic-other@example.test');assert.equal((await post(f,other,'/api/ai-walk/submit',{csrf:other.csrf,revision:1,confirmed:true})).status,422);
+});
+test('public Walk opens conversation only when enabled, while existing website records remain untouched',async t=>{
+ const f=fixture(t);for(const path of ['/walk','/walk/','/walk.html']){const r=await f.call(path);assert.equal(r.status,302);assert.equal(r.headers.get('Location'),'/ai-walk.html');}
+ f.env.AI_WALK_ENABLED='false';assert.equal((await f.call('/walk.html')).status,200);
+});
