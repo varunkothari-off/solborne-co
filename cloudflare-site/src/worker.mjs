@@ -5,6 +5,7 @@ import { privateAssets } from './private-assets.generated.mjs';
 import { validateWebsiteInterview, createWebsiteFiles } from './website.mjs';
 import { assets } from './assets.generated.mjs';
 import { providerReady, loadDraft, answerDraft, reviewDraft, submitBrief } from './ai-walk.mjs';
+import { transcribeAudio, validateAudio, MAX_AUDIO_BODY } from './walk-transcription.mjs';
 import { renderAIPortfolio, approvedClassicFacts } from './ai-portfolio.mjs';
 
 const CONSENT_VERSION = 'solborne-public-intake-v1';
@@ -106,6 +107,7 @@ async function register(request,env,now,authFetch=fetch) {
 async function serveAsset(request,path) {
   const key=path==='/'?'index.html':(path==='/walk'||path==='/walk/'?'walk.html':path==='/studio'||path==='/studio/'?'studio/index.html':path==='/studio-motion'||path==='/studio-motion/'?'studio-motion/index.html':path.replace(/^\//,''));const entry=assets[key];if(!entry)return error('This page was not found.',404,'not_found');
   const bytes=Uint8Array.from(atob(entry.body),c=>c.charCodeAt(0));const headers={...safeHeaders,'Content-Type':entry.type,'Cache-Control':'no-cache','ETag':'"'+entry.etag+'"'};
+  if(key==='ai-walk.html')headers['Permissions-Policy']='camera=(), microphone=(self), geolocation=()';
   const marketing=new Set(['/','/websites.html','/how-it-works.html','/about.html','/contact.html','/offer.html','/privacy.html','/terms.html']).has(path);
   if(entry.schemaHashes?.length||marketing){
     headers['Content-Security-Policy']=headers['Content-Security-Policy'].replace("script-src 'self'",`script-src 'self' ${[...(entry.schemaHashes||[]),...(marketing?['https://www.googletagmanager.com']:[])].join(' ')}`);
@@ -121,7 +123,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     const authResponse=await authRoute(request,env,now,{fetcher:authFetch});if(authResponse)return authResponse;
     if(['GET','HEAD'].includes(request.method)&&['/index.html','/improve.html'].includes(path))return new Response(null,{status:301,headers:{...safeHeaders,Location:(path==='/index.html'?'/':'/websites.html')+url.search,'Cache-Control':'no-cache'}});
     if(path==='/api/ai-walk/status'&&request.method==='GET')return json({ok:true,enabled:providerReady(env)});
-    if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete','/api/ai-walk/submit'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
+    if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete','/api/ai-walk/submit','/api/ai-walk/transcribe'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
       if(!await intakeReady(env))return error('The Walk is temporarily unavailable.',503,'registration_unavailable');
       const access=await accessFor(request,env,now);if(!access)return error('Save your basic details first.',403,'registration_required');
       if(['/api/ai-walk/preview','/api/ai-walk/complete'].includes(path)&&env.AI_WEBSITE_BUILD_ENABLED!=='true')return error('Website preparation follows team research and design approval. This Walk saves your business brief only.',503,'manual_design_required');
@@ -132,7 +134,16 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
         return json({ok:true,enabled:providerReady(env),state,revision:row?.revision||0});
       }
       if(!validOrigin(request,env))return error('Open the Walk directly and try again.',403,'origin_required');
-      const input=await readJson(request,8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');
+      const input=await readJson(request,path==='/api/ai-walk/transcribe'?MAX_AUDIO_BODY:8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');
+      if(path==='/api/ai-walk/transcribe'){
+        if(request.method!=='POST')return error('Use the correct action.',405,'method_not_allowed');
+        if(!providerReady(env))return error('Voice transcription is temporarily unavailable. You can still type your answer.',503,'provider_not_connected');
+        try{validateAudio(input);}catch(e){return error(e.message,422,'invalid_audio');}
+        const {state}=await loadDraft(env,access.registration_id);if(state.submission)return error('Your brief is already with our team.',409,'already_submitted');
+        if(!await rateLimit(env,'walk-voice:'+access.registration_id,now,900000,10)||!await rateLimit(env,'walk-voice-global',now,86400000,1000))return error('Please pause before recording another answer. You can still type.',429,'voice_limit');
+        try{const result=await transcribeAudio(env,input,{fetcher:modelFetch,signal:request.signal});return json({ok:true,...result});}
+        catch(e){return error(e.message.startsWith('No clear speech')?e.message:'We could not transcribe that recording. Try again or type your answer.',502,'transcription_unavailable');}
+      }
       if(request.method==='DELETE'){if(path!=='/api/ai-walk')return error('Use the correct action.',405,'method_not_allowed');const {row}=await loadDraft(env,access.registration_id);if(row?.busy_until>now)return error('Wait for the current operation before deleting this conversation.',409,'busy');await run(env,'DELETE FROM solborne_ai_walks WHERE registration_id=?',[access.registration_id]);return json({ok:true,deleted:true});}
       if(path==='/api/ai-walk/submit'){const result=await submitBrief(env,access.registration_id,input,now);return json(result.body,result.status);}
       if(!await rateLimit(env,'ai-walk:'+access.registration_id,now,900000,20))return error('Too many answers at once. Please continue shortly.',429,'rate_limited');

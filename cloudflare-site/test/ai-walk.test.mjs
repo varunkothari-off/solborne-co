@@ -19,11 +19,38 @@ async function register(f,email='synthetic-one@example.test'){const r=await f.ca
 function post(f,s,path,payload,extra={}){return f.call(path,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Cookie:s.cookie,'CF-Connecting-IP':'192.0.2.70',...extra},body:JSON.stringify(payload)});}
 function answer(f,s,extra={}){return post(f,s,'/api/ai-walk',{csrf:s.csrf,consent:true,message:'Synthetic repair workshop facts',revision:0,...extra});}
 test('AI APIs require registered ownership and do not expose model secrets',async t=>{const f=fixture(t);const status=await f.call('/api/ai-walk/status');assert.deepEqual(await status.json(),{ok:true,enabled:true});assert.equal((await f.call('/api/ai-walk')).status,403);assert.equal((await f.call('/api/ai-walk/preview')).status,403);});
+
+const voiceInput={consent:true,audioConsent:true,audio:btoa('RIFF'+String.fromCharCode(40,0,0,0)+'WAVE'+' '.repeat(48)),mimeType:'audio/wav',durationMs:1000};
+test('voice transcription requires ownership, exact origin, CSRF and both consents',async t=>{
+ const f=fixture(t),s=await register(f);let calls=0;f.setFetch(async()=>{calls++;throw Error('Must not call');});
+ assert.equal((await f.call('/api/ai-walk/transcribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(voiceInput)})).status,403);
+ for(const bad of [{csrf:'bad'},{audioConsent:false},{consent:false}])assert.equal((await post(f,s,'/api/ai-walk/transcribe',{csrf:s.csrf,...voiceInput,...bad})).status,bad.csrf?403:422);
+ assert.equal((await post(f,s,'/api/ai-walk/transcribe',{csrf:s.csrf,...voiceInput},{Origin:'https://outside.example'})).status,403);assert.equal(calls,0);
+});
+test('voice transcript is draft input: no saved conversation, submission or audio database record',async t=>{
+ const f=fixture(t),s=await register(f);f.setFetch(async()=>new Response(JSON.stringify({candidates:[{content:{parts:[{text:'{"text":"We help local businesses."}'}]}}]})));
+ const r=await post(f,s,'/api/ai-walk/transcribe',{csrf:s.csrf,...voiceInput});assert.equal(r.status,200);assert.equal((await r.json()).text,'We help local businesses.');assert.equal(f.db.sql.prepare('SELECT count(*) n FROM solborne_ai_walks').get().n,0);
+});
+test('microphone permission is limited to the Walk document',async t=>{
+ const f=fixture(t);assert.match((await f.call('/ai-walk.html')).headers.get('Permissions-Policy'),/microphone=\(self\)/);assert.match((await f.call('/')).headers.get('Permissions-Policy'),/microphone=\(\)/);
+});
 test('disabled provider makes no paid call',async t=>{const f=fixture(t,{enabled:false}),s=await register(f);let calls=0;f.setFetch(async()=>{calls++;throw Error();});assert.equal((await answer(f,s)).status,503);assert.equal(calls,0);});
 test('explicit model-processing consent, CSRF and exact origin required',async t=>{const f=fixture(t),s=await register(f);assert.equal((await answer(f,s,{consent:false})).status,422);assert.equal((await answer(f,s,{csrf:key()})).status,403);assert.equal((await post(f,s,'/api/ai-walk',{csrf:s.csrf,consent:true,message:'x',revision:0},{Origin:'https://outside.example'})).status,403);});
 test('saved draft is isolated from another registration',async t=>{const f=fixture(t),one=await register(f),two=await register(f,'synthetic-two@example.test');assert.equal((await answer(f,one)).status,200);const a=await (await f.call('/api/ai-walk',{headers:{Cookie:one.cookie}})).json(),b=await (await f.call('/api/ai-walk',{headers:{Cookie:two.cookie}})).json();assert.equal(a.state.facts.businessName,facts.businessName);assert.deepEqual(b.state.facts,{});assert.equal(a.state.consentVersion,'solborne-business-walk-v2');});
 test('model output schema rejects unexpected fields and missing facts override ready',()=>{assert.throws(()=>validateReply({...reply,facts:{...facts,password:'secret'}}));assert.throws(()=>validateReply({...reply,question:123}));const r=validateReply({...reply,facts:{businessName:'Only a name'}});assert.equal(r.ready,false);assert.ok(r.missing.includes('legalName'));});
 test('provider failures preserve saved state and do not leak response content',async t=>{const f=fixture(t),s=await register(f);f.setFetch(async()=>new Response('SECRET_VENDOR_ERROR',{status:401}));const r=await answer(f,s);assert.equal(r.status,502);assert.ok(!(await r.text()).includes('SECRET'));const row=f.db.sql.prepare('SELECT * FROM solborne_ai_walks').get();assert.equal(row.busy_until,0);assert.deepEqual(JSON.parse(row.state_json).facts,{});});
+
+test('Argon retains corrected owner evidence through a failed call without changing the live model default',async t=>{
+ const f=fixture(t),s=await register(f);f.env.GEMINI_MODEL='gemini-4-argon';f.setFetch(async()=>new Response('Unavailable',{status:500}));
+ assert.equal((await answer(f,s,{message:'Correction: founded in 1998.'})).status,502);let saved=JSON.parse(f.db.sql.prepare('SELECT state_json FROM solborne_ai_walks').get().state_json);assert.equal(saved.ownerMessages.at(-1).text,'Correction: founded in 1998.');
+ assert.equal((await answer(f,s,{message:'Correction: founded in 1998.'})).status,502);saved=JSON.parse(f.db.sql.prepare('SELECT state_json FROM solborne_ai_walks').get().state_json);assert.equal(saved.ownerMessages.length,1);
+});
+test('an unprocessed Argon correction invalidates a previously ready brief and blocks stale submission',async t=>{
+ const f=fixture(t),s=await register(f);assert.equal((await answer(f,s)).status,200);f.env.GEMINI_MODEL='gemini-4-argon';f.setFetch(async()=>new Response('Unavailable',{status:500}));
+ assert.equal((await answer(f,s,{revision:1,message:'Correction: our address has changed.'})).status,502);
+ const saved=JSON.parse(f.db.sql.prepare('SELECT state_json FROM solborne_ai_walks').get().state_json);assert.equal(saved.ready,false);assert.ok(saved.pendingAnswer);
+ assert.equal((await post(f,s,'/api/ai-walk/submit',{csrf:s.csrf,revision:1,confirmed:true})).status,422);
+});
 test('outdated revision and in-flight answers cannot overwrite progress',async t=>{const f=fixture(t),s=await register(f);assert.equal((await answer(f,s)).status,200);assert.equal((await answer(f,s)).status,409);f.db.sql.exec('UPDATE solborne_ai_walks SET busy_until=9999999999999');assert.equal((await answer(f,s,{revision:1})).status,409);});
 test('call cap survives an ordinary progress refresh',async t=>{const f=fixture(t),s=await register(f);await answer(f,s);f.db.sql.exec('UPDATE solborne_ai_walks SET calls=40');assert.equal((await answer(f,s,{revision:1})).status,429);});
 test('research and marketing run only after public-fact approval, and remain advice',async t=>{const f=fixture(t),s=await register(f);await answer(f,s);let calls=0;f.setFetch(async()=>{calls++;return new Response(JSON.stringify({candidates:[{content:{parts:[{text:JSON.stringify({summary:'Synthetic review',improvements:['Explain services clearly'],unresolved:['Verify asset permission']})}]},groundingMetadata:{groundingChunks:[{web:{uri:'https://example.test/official',title:'Synthetic source'}}]}}]}));});assert.equal((await post(f,s,'/api/ai-walk/review',{csrf:s.csrf,revision:1,ownerApproved:false})).status,422);const r=await post(f,s,'/api/ai-walk/review',{csrf:s.csrf,revision:1,ownerApproved:true});assert.equal(r.status,200);const data=await r.json();assert.equal(calls,2);assert.equal(data.state.review.publishing,'team-review-required');assert.equal(data.state.facts.businessName,facts.businessName);});
@@ -44,15 +71,15 @@ test('runtime carries persistent private discovery separately and uses versioned
   const state={facts,businessBrief:{...businessBrief,currentOperations:'PRIVATE_SYNTHETIC_PROCESS'},messages:[],template:'story',review:null};
   const result=await generateReply({GEMINI_API_KEY:'SYNTHETIC',GEMINI_MODEL:'gemini-4-argon'},state,'What happens next?',{fetcher:async(url,options)=>{
     sent={url,payload:JSON.parse(options.body)};
-    return new Response(JSON.stringify({candidates:[{content:{parts:[{text:JSON.stringify(reply)}]}}]}));
+    return new Response(JSON.stringify({candidates:[{content:{parts:[{text:JSON.stringify({message:'We can continue from your existing brief.',question:'Which business outcome matters most?',updates:[],unresolved:[],ready:false,stage:'priority',nextTopic:'priority'})}]}}]}));
   }});
   assert.ok(sent.url.includes('gemini-4-argon:generateContent'));
-  assert.ok(sent.payload.systemInstruction.parts[0].text.includes('industry-specific template comparison'));
+  assert.match(sent.payload.systemInstruction.parts[0].text,/industry[- ](?:specific|relevant) template comparison/);
   const context=JSON.parse(sent.payload.contents[0].parts[0].text);
-  assert.equal(context.businessBrief.currentOperations,'PRIVATE_SYNTHETIC_PROCESS');
-  assert.equal(context.facts.currentOperations,undefined);
-  assert.equal(result.reply.promptVersion,'solborne-conversational-walk-v3-20261020');
-  assert.ok(sent.payload.generationConfig.responseJsonSchema.required.includes('businessBrief'));
+  assert.equal(context.currentDraft.businessBrief.currentOperations,'PRIVATE_SYNTHETIC_PROCESS');
+  assert.equal(context.currentDraft.facts.currentOperations,undefined);
+  assert.ok(result.reply.promptVersion.includes('v6'));
+  assert.ok(sent.payload.generationConfig.responseJsonSchema.required.includes('updates'));
 });
 
 test('interview-only launch blocks legacy website generation even after reviews',async t=>{const f=fixture(t),s=await register(f);delete f.env.AI_WEBSITE_BUILD_ENABLED;await answer(f,s);let calls=0;f.setFetch(async()=>{calls++;throw Error('must not call');});const preview=await f.call('/api/ai-walk/preview',{headers:{Cookie:s.cookie}});assert.equal(preview.status,503);assert.equal((await preview.json()).code,'manual_design_required');const complete=await post(f,s,'/api/ai-walk/complete',{csrf:s.csrf,revision:1,ownerApproved:true,idempotencyKey:key()});assert.equal(complete.status,503);assert.equal(f.db.sql.prepare('SELECT count(*) n FROM solborne_walk_completions').get().n,0);assert.equal(calls,0);});

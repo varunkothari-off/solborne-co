@@ -1,7 +1,9 @@
 import {first,run} from './db.mjs';
+import {aiFields} from './ai-walk-fields.mjs';
+export {aiFields} from './ai-walk-fields.mjs';
+import {generateGroundedArgonReply} from './argon-walk.mjs';
 import {WALK_META_PROMPT,WALK_PROMPT_VERSION,businessBriefFields} from './walk-meta-prompt.mjs';
 
-export const aiFields={businessName:120,description:3000,audience:800,services:3000,location:200,callToAction:120,email:254,phone:40,websiteUrl:500,industry:120,brandDirection:1200,legalName:200,entityType:120,businessAddress:500,complaintsContact:500,feesAndTerms:2000,dataHandling:2000,proofAndPermissions:1500,currentAndPlanned:1500};
 export const initialState=()=>({messages:[],facts:{},businessBrief:{},promptVersion:WALK_PROMPT_VERSION,missing:[],ready:false,template:'editorial',stage:'business',review:null});
 const stages=new Set(['business','audience','offer','operations','priority','brand','proof','disclosures','review']);
 const templates=new Set(['editorial','story']);
@@ -25,6 +27,7 @@ export function providerReady(env){return env.AI_WALK_ENABLED==='true'&&typeof e
 export async function generateReply(env,state,message,{fetcher=fetch}={}){
   const model=env.GEMINI_MODEL||'gemini-3.1-flash-lite';
   if(!['gemini-3.1-flash-lite','gemini-2.5-flash-lite','gemini-4-argon'].includes(model))throw new Error('Unsupported model');
+  if(model==='gemini-4-argon')return generateGroundedArgonReply(env,state,message,{fetcher});
   const transcript=state.messages.slice(-12).map(x=>`${x.role}: ${x.text}`).join('\n');
   const properties=Object.fromEntries(Object.keys(aiFields).map(k=>[k,{type:'string'}]));
   const payload={systemInstruction:{parts:[{text:prompt}]},contents:[{role:'user',parts:[{text:JSON.stringify({facts:state.facts,businessBrief:state.businessBrief||{},template:state.template,promptVersion:WALK_PROMPT_VERSION,transcript,review:state.review,answer:message})}]}],generationConfig:{temperature:0.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{message:{type:'string'},question:{type:'string'},facts:{type:'object',properties,required:Object.keys(aiFields)},businessBrief:{type:'object',properties:Object.fromEntries(Object.keys(businessBriefFields).map(k=>[k,{type:'string'}])),required:Object.keys(businessBriefFields)},missing:{type:'array',items:{type:'string'}},ready:{type:'boolean'},template:{type:'string',enum:['editorial','story']},stage:{type:'string',enum:[...stages]}},required:['message','question','facts','businessBrief','missing','ready','template','stage']}}};
@@ -55,7 +58,7 @@ export async function reviewCall(env,facts,kind,fetcher=fetch){
 export async function reviewDraft(env,registration,input,now,{fetcher=fetch}={}){
   if(!providerReady(env))return {status:503,body:{ok:false,error:'Connect the AI provider before running reviews.'}};
   const {row,state}=await loadDraft(env,registration);
-  if(!row||!state.ready||input.ownerApproved!==true||input.revision!==row.revision)return {status:422,body:{ok:false,error:'Review and approve the completed business facts before running research.'}};
+  if(!row||!state.ready||state.pendingAnswer||input.ownerApproved!==true||input.revision!==row.revision)return {status:422,body:{ok:false,error:'Review and approve the completed business facts before running research.'}};
   const claim=await run(env,'UPDATE solborne_ai_walks SET busy_until=?,calls=calls+2 WHERE registration_id=? AND revision=? AND busy_until<=? AND calls<=38',[now+120000,registration,row.revision,now]);
   if(!(claim.meta?.changes>=1))return {status:409,body:{ok:false,error:'A review is running or the call limit has been reached. Refresh saved progress.'}};
   try{
@@ -78,15 +81,22 @@ export async function answerDraft(env,registration,input,now,{fetcher=fetch}={})
   if(row.calls>=40)return {status:429,body:{ok:false,error:'This Walk has reached its model-call limit. Review your brief or contact Solborne.'}};
   const claim=await run(env,'UPDATE solborne_ai_walks SET busy_until=?,calls=calls+1 WHERE registration_id=? AND revision=? AND busy_until<=? AND calls<40',[now+60000,registration,input.revision,now]);
   if(!(claim.meta?.changes>=1))return {status:409,body:{ok:false,error:'An answer is already being processed. Refresh your saved conversation shortly.'}};
+  let callState=state;
+  if(env.GEMINI_MODEL==='gemini-4-argon'){
+    const ownerMessages=structuredClone(state.ownerMessages||state.messages.filter(m=>m.role==='user').map((m,i)=>({id:i+1,text:m.text})));
+    if(!state.pendingAnswer||state.pendingAnswer.text!==input.message){ownerMessages.push({id:(ownerMessages.at(-1)?.id||0)+1,text:input.message});}
+    callState={...state,ownerMessages,pendingAnswer:{id:ownerMessages.at(-1)?.id,text:input.message},ready:false,review:null};
+    await run(env,'UPDATE solborne_ai_walks SET state_json=? WHERE registration_id=? AND revision=? AND busy_until=?',[JSON.stringify(callState),registration,input.revision,now+60000]);
+  }
   try{
-    const {reply,usage}=await generateReply(env,state,input.message,{fetcher});
-    const next={...state,...reply,consentVersion:'solborne-business-walk-v2',consentAt:state.consentVersion==='solborne-business-walk-v2'?state.consentAt||now:now,messages:[...state.messages,{role:'user',text:input.message},{role:'assistant',text:[reply.message,reply.question].filter(Boolean).join('\n\n')}].slice(-80),review:null,usage:{input:(state.usage?.input||0)+usage.input,output:(state.usage?.output||0)+usage.output,thinking:(state.usage?.thinking||0)+usage.thinking}};
+    const {reply,usage}=await generateReply(env,callState,input.message,{fetcher});
+    const next={...callState,...reply,pendingAnswer:null,consentVersion:'solborne-business-walk-v2',consentAt:state.consentVersion==='solborne-business-walk-v2'?state.consentAt||now:now,messages:[...state.messages,{role:'user',text:input.message},{role:'assistant',text:[reply.message,reply.question].filter(Boolean).join('\n\n')}].slice(-80),review:null,usage:{input:(state.usage?.input||0)+usage.input,output:(state.usage?.output||0)+usage.output,thinking:(state.usage?.thinking||0)+usage.thinking}};
     const saved=await run(env,'UPDATE solborne_ai_walks SET state_json=?,revision=revision+1,busy_until=0,updated_at=? WHERE registration_id=? AND revision=? AND busy_until=?',[JSON.stringify(next),now,registration,input.revision,now+60000]);
     if(!(saved.meta?.changes>=1))return {status:409,body:{ok:false,error:'Your progress changed. Refresh before continuing.'}};
     return {status:200,body:{ok:true,state:next,revision:input.revision+1}};
   }catch{
     await run(env,'UPDATE solborne_ai_walks SET busy_until=0 WHERE registration_id=? AND revision=? AND busy_until=?',[registration,input.revision,now+60000]);
-    return {status:502,body:{ok:false,error:'The AI could not finish that answer. Your saved progress is unchanged. Retry once or use the existing Walk.'}};
+    return {status:502,body:{ok:false,error:env.GEMINI_MODEL==='gemini-4-argon'?'Your answer is saved, but the updated summary could not be completed. Retry this answer before sending your brief.':'The AI could not finish that answer. Your saved progress is unchanged. Retry once or use the existing Walk.'}};
   }
 }
 // Interview handoff only. This never creates website files or grants release access.
@@ -94,7 +104,7 @@ export async function submitBrief(env,registration,input,now){
   const {row,state}=await loadDraft(env,registration);
   if(input?.confirmed!==true)return {status:422,body:{ok:false,error:'Confirm your business summary before sending it to our team.'}};
   if(state.submission)return {status:200,body:{ok:true,state,revision:row.revision,replayed:true}};
-  if(!row||!state.ready||row.revision!==input.revision)return {status:422,body:{ok:false,error:'Finish the conversation and check the latest summary before sending.'}};
+  if(!row||!state.ready||state.pendingAnswer||row.revision!==input.revision)return {status:422,body:{ok:false,error:'Finish the conversation and check the latest summary before sending.'}};
   if(row.busy_until>now)return {status:409,body:{ok:false,error:'Wait for the current answer to finish, then send your brief.'}};
   const submission={id:'WB-'+crypto.randomUUID(),submittedAt:now,dueAt:now+24*60*60*1000,status:'awaiting_manual_review',confirmedRevision:row.revision};
   const next={...state,submission};

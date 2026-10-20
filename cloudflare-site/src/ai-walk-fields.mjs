@@ -1,0 +1,1 @@
+export const aiFields={businessName:120,description:3000,audience:800,services:3000,location:200,callToAction:120,email:254,phone:40,websiteUrl:500,industry:120,brandDirection:1200,legalName:200,entityType:120,businessAddress:500,complaintsContact:500,feesAndTerms:2000,dataHandling:2000,proofAndPermissions:1500,currentAndPlanned:1500};
