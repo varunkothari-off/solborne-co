@@ -11,3 +11,11 @@ Server tests cover active-project ownership/foreign/unbound denial, CSRF/origin,
 Spec Kit1.2.2 actual CLI initialization and Codex skills/template resolution verified in engineering/spec-kit-install.json; upstream PowerShell check-prerequisites resolves this feature's plan/tasks with SPECIFY_FEATURE_DIRECTORY=specs/001-walk-design. Required artifact gate and PR/issue templates are implemented; branch protection is not configured.
 
 The PR and autonomous worker receipts are recorded as later checkpoints. No production release, full-platform certification, paid inference cost or measured savings is implied.
+
+## Autonomous activation checkpoint
+
+PR19 remote GitHub source-checks and evidence checks passed on4719e9b. Owner-authored queue issue20 was selected, marked working and executed in an isolated worktree. The native app worker added3action regressions;9focused tests passed. Coordinator independently reviewed the diff and ran CI-aligned full tests with synthetic delivery fixtures:245passed,0failed; the one real-PDF-byte comparison is excluded by the same named CI pattern, not represented as exercised here.
+
+The initial nested CLI trial was blocked by its host execution policy; no sandbox bypass was used. The permitted native app worker completed the task instead. Codex heartbeat solborne-spec-led-development-agent is ACTIVE every2hours in this development chat. Queue policy, approved issue scope, resource bounds and draft-only restrictions live in engineering/agent-policy.json. Availability depends on this host/app; no always-on server is claimed.
+
+GitHub protection API accepted and returned required source-checks and evidence, strict up-to-date checks, admin enforcement and disabled force pushes on feat/walk-live-transcription-preview-20261020 and feat/spec-kit-walk-design. Review count is0because this is a single-owner repository; human merge approval is the agent policy, not falsely claimed as a separate GitHub reviewer identity. All actual changes remain draft PRs, not production releases.

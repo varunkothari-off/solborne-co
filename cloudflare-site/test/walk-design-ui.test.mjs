@@ -13,3 +13,31 @@ test('AC-02/06 closed-panel renders preserve sketch and conversation completion 
 test('AC-02 hidden restore then resize retains a saved sketch',async()=>{const p=page(),sketch=[[{x:.2,y:.3},{x:.8,y:.7}]];p.widget.update({designPreferences:{sketch}},false);p.get('design-sketch-open').fire('click');p.get('design-sketch').rect={width:0,height:0};p.widget.update({designPreferences:{sketch}},false);p.get('design-sketch').rect={width:300,height:150};p.resize();assert.equal(p.pad.toData().length,1);await p.get('design-form').fire('submit');assert.equal(p.saved[0].designPreferences.sketch[0][0].x,.2);});
 
 test('AC-02 render before resize observer preserves normalized coordinates',async()=>{const p=page(),sketch=[[{x:.2,y:.3},{x:.8,y:.7}]];p.widget.update({designPreferences:{sketch}},false);p.get('design-sketch-open').fire('click');p.get('design-sketch').rect={width:300,height:150};p.widget.update({designPreferences:{sketch}},false);p.resize();await p.get('design-form').fire('submit');assert.equal(p.saved[0].designPreferences.sketch[0][0].x,.2);assert.equal(p.saved[0].designPreferences.sketch[0][0].y,.3);});
+
+test('AC-02 undo on two restored strokes saves only the first normalized stroke',async()=>{
+ const p=page(),sketch=[[{x:.1,y:.2},{x:.3,y:.4}],[{x:.6,y:.7},{x:.9,y:.8}]];
+ p.widget.update({designPreferences:{sketch}},false);p.get('design-sketch-open').fire('click');
+ assert.equal(p.pad.toData().length,2);p.get('design-undo').fire('click');
+ assert.equal(p.widget.dirty,true);await p.get('design-form').fire('submit');
+ assert.equal(p.saved.length,1);assert.deepEqual(p.saved[0].designPreferences.sketch,[sketch[0]]);
+});
+
+test('AC-02 clear on a restored sketch saves zero strokes without removing written notes',async()=>{
+ const p=page(),sketch=[[{x:.2,y:.3},{x:.8,y:.7}]],notes='Keep the welcoming shop entrance in the design.';
+ p.widget.update({designPreferences:{sketch,notes}},false);p.get('design-sketch-open').fire('click');
+ assert.equal(p.pad.toData().length,1);p.get('design-clear').fire('click');
+ assert.equal(p.widget.dirty,true);await p.get('design-form').fire('submit');
+ assert.equal(p.saved.length,1);assert.deepEqual(p.saved[0].designPreferences.sketch,[]);
+ assert.equal(p.saved[0].designPreferences.notes,notes);assert.equal(p.get('design-notes').value,notes);
+});
+
+test('AC-03 submitted sketch ignores undo and clear actions and cannot send another save',async()=>{
+ const p=page(),sketch=[[{x:.1,y:.2},{x:.3,y:.4}],[{x:.6,y:.7},{x:.9,y:.8}]],notes='The submitted design.';
+ p.widget.update({designPreferences:{sketch,notes}},false);p.get('design-sketch-open').fire('click');
+ p.context.submitted=true;p.widget.update({submission:{id:'WB-submitted'},designPreferences:{sketch,notes}},false);
+ const before=JSON.stringify(p.pad.toData());
+ assert.equal(p.get('design-undo').disabled,true);assert.equal(p.get('design-clear').disabled,true);
+ p.get('design-undo').fire('click');p.get('design-clear').fire('click');await p.get('design-form').fire('submit');
+ assert.equal(JSON.stringify(p.pad.toData()),before);assert.equal(p.get('design-notes').value,notes);
+ assert.equal(p.widget.dirty,false);assert.equal(p.saved.length,0);
+});
