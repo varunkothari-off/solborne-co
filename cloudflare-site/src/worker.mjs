@@ -1,4 +1,5 @@
 import {createLiveToken} from './walk-live-token.mjs';
+import {saveDesignPreferences} from './walk-design.mjs';
 import {publicMetrics} from './public-metrics.mjs';
 import { authRoute, authEnabled, authIdentity } from './canvas-auth.mjs';
 import {flushPresales} from './presales-sync.mjs';
@@ -138,7 +139,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     const authResponse=await authRoute(request,env,now,{fetcher:authFetch});if(authResponse)return authResponse;
     if(['GET','HEAD'].includes(request.method)&&['/index.html','/improve.html'].includes(path))return new Response(null,{status:301,headers:{...safeHeaders,Location:(path==='/index.html'?'/':'/websites.html')+url.search,'Cache-Control':'no-cache'}});
     if(path==='/api/ai-walk/status'&&request.method==='GET')return json({ok:true,enabled:providerReady(env)});
-    if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete','/api/ai-walk/submit','/api/ai-walk/transcribe','/api/ai-walk/live-token'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
+    if(['/api/ai-walk','/api/ai-walk/design','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete','/api/ai-walk/submit','/api/ai-walk/transcribe','/api/ai-walk/live-token'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
       if(!await intakeReady(env))return error('The Walk is temporarily unavailable.',503,'registration_unavailable');
       const access=await accessFor(request,env,now,authFetch);if(!access)return error('Save your basic details first.',403,'registration_required');
       if(['/api/ai-walk/preview','/api/ai-walk/complete'].includes(path)&&env.AI_WEBSITE_BUILD_ENABLED!=='true')return error('Website preparation follows team research and design approval. This Walk saves your business brief only.',503,'manual_design_required');
@@ -149,7 +150,12 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
         return json({ok:true,enabled:providerReady(env),state,revision:row?.revision||0,...(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true'?{voiceMode:'live'}:{})});
       }
       if(!validOrigin(request,env))return error('Open the Walk directly and try again.',403,'origin_required');
-      const input=await readJson(request,path==='/api/ai-walk/transcribe'?MAX_AUDIO_BODY:path==='/api/ai-walk'?262144:8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');
+      const input=await readJson(request,path==='/api/ai-walk/transcribe'?MAX_AUDIO_BODY:path==='/api/ai-walk'?262144:path==='/api/ai-walk/design'?131072:8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');
+      if(path==='/api/ai-walk/design'){
+        if(request.method!=='POST')return error('Use the correct action.',405,'method_not_allowed');
+        if(!await rateLimit(env,'walk-design:'+access.registration_id,now,900000,40))return error('Please pause before saving again.',429,'rate_limited');
+        const result=await saveDesignPreferences(env,access.registration_id,input,now);return json(result.body,result.status);
+      }
       if(path==='/api/ai-walk/live-token'){
         if(request.method!=='POST')return error('Use the correct action.',405,'method_not_allowed');
         if(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED!=='true'||!providerReady(env))return error('Live transcription is not enabled.',503,'live_voice_disabled');

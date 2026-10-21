@@ -1,0 +1,54 @@
+name: Scoped agent development task
+description: Propose a bounded spec-led task for an agent to prepare a draft PR.
+title: "[Agent task] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Creating this issue does not authorise execution. The owner must review scope and mark
+        it ready using the configured agent queue. Agents prepare changes; humans approve merges
+        and production releases. Never include credentials or private customer records.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and intended behaviour
+      description: Who needs this, what happens now, and what should happen instead?
+    validations:
+      required: true
+  - type: input
+    id: specification
+    attributes:
+      label: Approved specification and baseline
+      description: Repository spec path and reviewed base commit or branch.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria and test-first verification
+      description: AC IDs, observable outcomes, relevant commands and expected initial failure.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Allowed files and exclusions
+      description: Bounded paths, dependencies, resource ceiling and explicit out-of-scope work.
+    validations:
+      required: true
+  - type: textarea
+    id: reuse
+    attributes:
+      label: Reuse and risk notes
+      description: Relevant approved components, licences, data boundaries and rollback considerations.
+    validations:
+      required: true
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness for owner review
+      options:
+        - label: The scope, spec and acceptance criteria are explicit; no unresolved business decision is delegated to the agent.
+          required: true
+        - label: This task authorises no merge, production deployment, paid spend or credential change.
+          required: true

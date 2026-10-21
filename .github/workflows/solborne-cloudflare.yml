@@ -2,8 +2,7 @@ name: Solborne Cloudflare source checks
 on:
   push:
     paths: ['cloudflare-site/**', '.github/workflows/solborne-cloudflare.yml']
-  pull_request:
-    paths: ['cloudflare-site/**', '.github/workflows/solborne-cloudflare.yml']
+  pull_request: {}
 permissions:
   contents: read
 jobs:

@@ -6,5 +6,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test --experimental-test-isolation=none test/*.test.mjs qa/*.test.mjs"
+  },
+  "dependencies": {
+    "signature_pad": "5.1.4"
   }
 }
