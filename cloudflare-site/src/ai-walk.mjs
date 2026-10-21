@@ -1,5 +1,5 @@
 import {first,run} from './db.mjs';
-import {designText} from './walk-design.mjs';
+import {designText,validateSketch,answerSketchMetadata,withinSketchBudget} from './walk-design.mjs';
 import {aiFields} from './ai-walk-fields.mjs';
 export {aiFields} from './ai-walk-fields.mjs';
 import {generateGroundedArgonReply} from './argon-walk.mjs';
@@ -31,7 +31,7 @@ export async function generateReply(env,state,message,{fetcher=fetch}={}){
   if(model==='gemini-4-argon')return generateGroundedArgonReply(env,state,message,{fetcher});
   const transcript=state.messages.slice(-12).map(x=>`${x.role}: ${x.text}`).join('\n');
   const properties=Object.fromEntries(Object.keys(aiFields).map(k=>[k,{type:'string'}]));
-  const payload={systemInstruction:{parts:[{text:prompt}]},contents:[{role:'user',parts:[{text:JSON.stringify({designPreferences:designText(state),facts:state.facts,businessBrief:state.businessBrief||{},template:state.template,promptVersion:WALK_PROMPT_VERSION,transcript,review:state.review,answer:message})}]}],generationConfig:{temperature:0.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{message:{type:'string'},question:{type:'string'},facts:{type:'object',properties,required:Object.keys(aiFields)},businessBrief:{type:'object',properties:Object.fromEntries(Object.keys(businessBriefFields).map(k=>[k,{type:'string'}])),required:Object.keys(businessBriefFields)},missing:{type:'array',items:{type:'string'}},ready:{type:'boolean'},template:{type:'string',enum:['editorial','story']},stage:{type:'string',enum:[...stages]}},required:['message','question','facts','businessBrief','missing','ready','template','stage']}}};
+  const payload={systemInstruction:{parts:[{text:prompt}]},contents:[{role:'user',parts:[{text:JSON.stringify({designPreferences:designText(state),sketchAttachments:answerSketchMetadata(state),facts:state.facts,businessBrief:state.businessBrief||{},template:state.template,promptVersion:WALK_PROMPT_VERSION,transcript,review:state.review,answer:message})}]}],generationConfig:{temperature:0.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{message:{type:'string'},question:{type:'string'},facts:{type:'object',properties,required:Object.keys(aiFields)},businessBrief:{type:'object',properties:Object.fromEntries(Object.keys(businessBriefFields).map(k=>[k,{type:'string'}])),required:Object.keys(businessBriefFields)},missing:{type:'array',items:{type:'string'}},ready:{type:'boolean'},template:{type:'string',enum:['editorial','story']},stage:{type:'string',enum:[...stages]}},required:['message','question','facts','businessBrief','missing','ready','template','stage']}}};
   const response=await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify(payload),signal:AbortSignal.timeout(45000)});
   if(!response.ok)throw new Error('Model temporarily unavailable');
   const raw=await response.text();if(raw.length>100000)throw new Error('Reply too large');
@@ -81,25 +81,36 @@ export async function reviewDraft(env,registration,input,now,{fetcher=fetch}={})
 export async function answerDraft(env,registration,input,now,{fetcher=fetch}={}){
   if(!providerReady(env))return {status:503,body:{ok:false,code:'provider_not_connected',error:'The guided AI Walk is waiting for its provider connection. Your existing Walk remains available.'}};
   if(input?.consent!==true)return {status:422,body:{ok:false,error:'Agree to AI processing of your business brief before starting.'}};
-  if(typeof input.message!=='string'||!input.message.trim()||!Number.isSafeInteger(input.revision)||input.revision<0)return {status:422,body:{ok:false,error:'Enter your answer and refresh your saved progress.'}};
+  let sketch;try{sketch=validateSketch(input.sketch);}catch{return {status:422,body:{ok:false,error:'Use a smaller sketch with valid drawing points.'}};}
+  const suppliedMessage=input.message===undefined?'':input.message;
+  if(typeof suppliedMessage!=='string'||(!suppliedMessage.trim()&&!sketch.length)||!Number.isSafeInteger(input.revision)||input.revision<0)return {status:422,body:{ok:false,error:'Enter your answer or add a sketch, and refresh your saved progress.'}};
+  const message=suppliedMessage.trim()?suppliedMessage:'[Sketch attached]';
   await run(env,'INSERT OR IGNORE INTO solborne_ai_walks (registration_id,state_json,created_at,updated_at) VALUES (?,?,?,?)',[registration,JSON.stringify(initialState()),now,now]);
   const {row,state}=await loadDraft(env,registration);
   if(row.revision!==input.revision)return {status:409,body:{ok:false,error:'Your Walk changed in another tab. Refresh the conversation before sending again.'}};
   if(state.submission)return {status:409,body:{ok:false,error:'Your brief is with our team. Contact varun@getsolborne.com to add a correction.'}};
+  const pending=typeof state.pendingAnswer==='string'?{text:state.pendingAnswer}:state.pendingAnswer;
+  if(pending&&(pending.text!==message||JSON.stringify(pending.sketch||[])!==JSON.stringify(sketch)))return {status:409,body:{ok:false,error:'An earlier answer is waiting to finish. Retry its saved text and sketch before sending a different answer.'}};
+  const ownerMessages=structuredClone(state.ownerMessages?.length?state.ownerMessages:state.messages.filter(m=>m.role==='user').map((m,i)=>({id:Number.isSafeInteger(m.turn)?m.turn:i+1,text:m.text})));
+  const pendingTurn=pending&&(Number.isSafeInteger(pending.id)&&pending.id>0?pending.id:ownerMessages.at(-1)?.text===message?ownerMessages.at(-1)?.id:undefined);
+  const turn=pendingTurn||Math.max(0,...ownerMessages.map(m=>m.id))+1;
+  if(!withinSketchBudget(state.answerSketches,turn,sketch))return {status:422,body:{ok:false,error:'This Walk has many drawings. Clear an older sketch or simplify this one before saving.'}};
   if(row.calls>=40)return {status:429,body:{ok:false,error:'This Walk has reached its model-call limit. Review your brief or contact Solborne.'}};
   const claim=await run(env,'UPDATE solborne_ai_walks SET busy_until=?,calls=calls+1 WHERE registration_id=? AND revision=? AND busy_until<=? AND calls<40',[now+60000,registration,input.revision,now]);
   if(!(claim.meta?.changes>=1))return {status:409,body:{ok:false,error:'An answer is already being processed. Refresh your saved conversation shortly.'}};
-  let callState=state;
+  const originatingQuestion=pending?.question??state.question??state.messages.filter(m=>m.role==='assistant').at(-1)?.text??'';
+  if(!pending||!ownerMessages.some(item=>item.id===turn))ownerMessages.push({id:turn,text:message});
+  const pendingAnswer={id:turn,text:message,sketch,question:originatingQuestion};
+  let callState={...state,ownerMessages,pendingAnswer};
   if(env.GEMINI_MODEL==='gemini-4-argon'){
-    const ownerMessages=structuredClone(state.ownerMessages||state.messages.filter(m=>m.role==='user').map((m,i)=>({id:i+1,text:m.text})));
-    if(!state.pendingAnswer||state.pendingAnswer.text!==input.message){ownerMessages.push({id:(ownerMessages.at(-1)?.id||0)+1,text:input.message});}
-    callState={...state,ownerMessages,pendingAnswer:{id:ownerMessages.at(-1)?.id,text:input.message},ready:false,review:null};
+    callState={...callState,ready:false,review:null};
     await run(env,'UPDATE solborne_ai_walks SET state_json=? WHERE registration_id=? AND revision=? AND busy_until=?',[JSON.stringify(callState),registration,input.revision,now+60000]);
   }
   try{
     if(!await reserveModelCalls(env,now,1)){await run(env,'UPDATE solborne_ai_walks SET busy_until=0,calls=calls-1 WHERE registration_id=? AND revision=? AND busy_until=?',[registration,input.revision,now+60000]);return dailyLimit();}
-    const {reply,usage}=await generateReply(env,callState,input.message,{fetcher});
-    const next={...callState,...reply,pendingAnswer:null,consentVersion:'solborne-business-walk-v2',consentAt:state.consentVersion==='solborne-business-walk-v2'?state.consentAt||now:now,messages:[...state.messages,{role:'user',text:input.message},{role:'assistant',text:[reply.message,reply.question].filter(Boolean).join('\n\n')}].slice(-80),review:null,usage:{input:(state.usage?.input||0)+usage.input,output:(state.usage?.output||0)+usage.output,thinking:(state.usage?.thinking||0)+usage.thinking}};
+    const {reply,usage}=await generateReply(env,callState,message,{fetcher});
+    const answerSketches=[...(state.answerSketches||[])];if(sketch.length)answerSketches.push({turn,question:originatingQuestion,strokes:sketch});
+    const next={...callState,...reply,ownerMessages:reply.ownerMessages||ownerMessages,answerSketches,pendingAnswer:null,consentVersion:'solborne-business-walk-v2',consentAt:state.consentVersion==='solborne-business-walk-v2'?state.consentAt||now:now,messages:[...state.messages,{role:'user',text:message,turn,question:originatingQuestion},{role:'assistant',text:[reply.message,reply.question].filter(Boolean).join('\n\n')}].slice(-80),review:null,usage:{input:(state.usage?.input||0)+usage.input,output:(state.usage?.output||0)+usage.output,thinking:(state.usage?.thinking||0)+usage.thinking}};
     const saved=await run(env,'UPDATE solborne_ai_walks SET state_json=?,revision=revision+1,busy_until=0,updated_at=? WHERE registration_id=? AND revision=? AND busy_until=?',[JSON.stringify(next),now,registration,input.revision,now+60000]);
     if(!(saved.meta?.changes>=1))return {status:409,body:{ok:false,error:'Your progress changed. Refresh before continuing.'}};
     return {status:200,body:{ok:true,state:next,revision:input.revision+1}};

@@ -1,0 +1,63 @@
+{
+  "feature": "002-conversational-sketch",
+  "spec": "specs/002-conversational-sketch/spec.md",
+  "plan": "specs/002-conversational-sketch/plan.md",
+  "tasks": "specs/002-conversational-sketch/tasks.md",
+  "acceptance": [
+    {
+      "id": "AC-01",
+      "tests": [
+        "cloudflare-site/test/conversational-design.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "tests": [
+        "cloudflare-site/test/answer-sketch-ui.test.mjs",
+        "cloudflare-site/test/answer-sketch.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "tests": [
+        "cloudflare-site/test/answer-sketch.test.mjs",
+        "cloudflare-site/test/ai-walk-frontend.test.mjs",
+        "cloudflare-site/test/conversational-design.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-04",
+      "tests": [
+        "cloudflare-site/test/answer-sketch-ui.test.mjs",
+        "cloudflare-site/test/answer-sketch.test.mjs",
+        "cloudflare-site/test/ai-walk-frontend.test.mjs"
+      ]
+    }
+  ],
+  "tdd": {
+    "red": {
+      "commit": "7d5ef18",
+      "command": "cd cloudflare-site && node --test test/conversational-design.test.mjs test/answer-sketch.test.mjs",
+      "result": "failed",
+      "reason": "Missing grounded design fields, no per-answer attachments, sketch-only422 and invalidsketchaccepted before implementation. Reviewerwiring regressions also observed mainSend enabled inpasthistorymode andmissingpendingtext beforefix."
+    },
+    "green": {
+      "command": "cd cloudflare-site && npm run build && npm test",
+      "result": "passed"
+    }
+  },
+  "review": {
+    "status": "passed",
+    "report": "engineering/review-conversational-sketch.md"
+  },
+  "reuse": {
+    "manifest": "engineering/reuse-registry.json"
+  },
+  "limitations": [
+    "265platformtests passed locally;14gate tests verify artifact validation, not semanticcorrectness.",
+    "Synthetic local preview uses deterministicfakeprovider andin-memorySQLite, not a realArgon qualityevaluation or productiondeployment.",
+    "Readonly hostedSQL verified Solborneai_walkstorageand0newdesign/sketchrecords; actualnewsketchsync testedonlywithsyntheticoutbox.",
+    "Sketch vectors are retained forhumanreview; conversationalmodels receive metadata only and cannot visually interpret sketches.",
+    "Mobile width emulation is not physical phone/stylus certification."
+  ]
+}
