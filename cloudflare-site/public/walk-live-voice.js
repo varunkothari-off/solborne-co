@@ -57,16 +57,16 @@
   function text(value,error=false){$('voice-status').textContent=value;$('voice-status').setAttribute('role',error?'alert':'status');}
   function cleanup(){win.clearInterval(tick);tick=null;session?.close();session=null;}
   function update(){
-   const ctx=context(),consent=ctx.consent&&$('voice-consent').checked;if(!consent&&(active||session)){cancel('Microphone disconnected. Your answer is kept.');return;}
-   $('voice-start').disabled=!supported||!ctx.allowed||!consent||active;$('voice-start').hidden=active;
+   const ctx=context(),consent=ctx.consent&&$('voice-consent').checked;if(!consent&&(active||session)){cancel('');return;}
+   $('voice-start').disabled=!supported||!ctx.allowed||active;$('voice-start').hidden=active;
    $('voice-stop').hidden=phase!=='recording';$('voice-stop').setAttribute('aria-label','Stop microphone');$('voice-timer').hidden=phase!=='recording';
    $('voice-cancel').hidden=!active&&!session;$('voice-retry').hidden=true;$('voice-again').hidden=true;
    $('voice-review').hidden=true;$('voice-use').hidden=true;
    $('voice-consent').disabled=!ctx.consent&&!$('voice-consent').checked;$('voice-tools').dataset.state=phase;
-   $('voice-note').textContent='Speak or type. Edit before you send.';
+   $('voice-note').textContent='';
   }
   function setPhase(next){phase=next;const value=['requesting','recording','transcribing'].includes(next);active=value;options.onBusy?.(value);update();}
-  function cancel(message='Microphone disconnected. Your answer is kept.'){
+  function cancel(message=''){
    id++;abort?.abort();abort=null;cleanup();finalText=partial='';setPhase('idle');text(message);
   }
   function interrupted(){cancel();text('Connection interrupted. Your words are kept; the ending may be missing. Check your answer, then tap the microphone to reconnect.',true);}
@@ -84,8 +84,8 @@
    const delta=next.length-lastValue.length;if(oldRight<=regionStart){regionStart+=delta;regionEnd+=delta;}else if(left<regionEnd){sealedPrefix=(finalText+partial).trim();regionStart=regionEnd=typeof answer.selectionStart==='number'?answer.selectionStart:next.length;}lastValue=next;
   }
   async function start(){
-   const ctx=context();if(destroyed||active||!supported||!ctx.allowed||!ctx.consent||!$('voice-consent').checked)return;
-   const attempt=++id;beginRegion();setPhase('requesting');text(session?'Microphone on…':'Microphone on. Preparing live text…');
+   const ctx=context();if(destroyed||active||!supported||!ctx.allowed)return;if(!ctx.consent||!$('voice-consent').checked){options.onConsentRequired?.();return;}
+   const attempt=++id;beginRegion();setPhase('requesting');text(session?'Listening…':'Connecting…');
    try{
     if(session)await session.start();else{
      abort=new AbortController();const connectionSignal=abort.signal;const incoming=await (options.connect||connect)({csrf:ctx.csrf,signal:abort.signal,
@@ -94,16 +94,16 @@
       onError:()=>{if(!destroyed&&!connectionSignal.aborted&&(active||session))interrupted();}});
      if(attempt!==id||destroyed){incoming.close();return;}session=incoming;
     }
-    if(attempt!==id)return;setPhase('recording');text('Listening. Your words appear in your answer.');const started=Date.now();$('voice-timer').textContent='0:00';tick=win.setInterval(()=>{const s=Math.floor((Date.now()-started)/1000);$('voice-timer').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');},1000);
+    if(attempt!==id)return;setPhase('recording');text('Listening…');const started=Date.now();$('voice-timer').textContent='0:00';tick=win.setInterval(()=>{const s=Math.floor((Date.now()-started)/1000);$('voice-timer').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');},1000);
    }catch(error){if(attempt!==id)return;cleanup();setPhase('idle');text(error?.name==='NotAllowedError'?'Microphone access was not allowed. Enable it in browser settings, or type your answer.':'Live text couldn’t connect. Opening words may be missing. Tap the microphone to try again, or type your answer.',true);}
   }
   async function stop(){
-   if(settling)return settling;if(phase!=='recording'||!session)return;const attempt=id;win.clearInterval(tick);setPhase('transcribing');text('Microphone paused. Finishing your words…');
-   settling=(async()=>{try{await session.stop();if(attempt!==id)return;/* Preserve any visible interim tail if the provider supplied no final replacement. */setPhase('idle');text('Microphone paused. Edit or send your answer.');}catch{if(attempt===id)interrupted();}finally{settling=null;}})();return settling;
+   if(settling)return settling;if(phase!=='recording'||!session)return;const attempt=id;win.clearInterval(tick);setPhase('transcribing');text('Finishing…');
+   settling=(async()=>{try{await session.stop();if(attempt!==id)return;/* Preserve any visible interim tail if the provider supplied no final replacement. */setPhase('idle');text('');}catch{if(attempt===id)interrupted();}finally{settling=null;}})();return settling;
   }
   const handlers=[];function bind(target,event,fn){target.addEventListener(event,fn);handlers.push(()=>target.removeEventListener?.(event,fn));}
   bind($('voice-start'),'click',start);bind($('voice-stop'),'click',stop);bind($('voice-cancel'),'click',()=>cancel());bind($('voice-again'),'click',start);bind($('ai-answer'),'input',edited);
-  for(const name of ['voice-consent','ai-consent'])bind($(name),'change',()=>{if(!$(name).checked)cancel('Microphone disconnected. Your answer is kept.');else update();});
+  for(const name of ['voice-consent','ai-consent'])bind($(name),'change',()=>{if(!$(name).checked)cancel('');else update();});
   for(const event of ['pagehide','beforeunload'])bind(win,event,()=>cancel(''));
   update();if(!supported)text('Live audio isn’t available here. Type, or use your keyboard microphone.');
   return {update,cancel,stop,settle:stop,destroy(){destroyed=true;cancel('');for(const remove of handlers)remove();},get phase(){return phase;}};
