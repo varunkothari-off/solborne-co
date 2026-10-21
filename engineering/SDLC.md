@@ -2,7 +2,7 @@
 
 Date: 21 October 2026.
 
-Status: Spec Kit 1.2.2 installed with Codex skills, constitution and bundled SDD workflow. A local artifact gate and CI workflow are implemented. Feature proof and autonomous activation receipts are recorded in specs/001-walk-design/verification.md. Branch protection is not claimed configured; production behaviour is not changed until a separately approved release.
+Status: Spec Kit 1.2.2 installed with Codex skills, constitution and bundled SDD workflow. A local artifact gate and CI workflow are implemented. Feature proof and autonomous activation receipts are recorded in specs/001-walk-design/verification.md. Required source-checks/evidence branch protection is configured on the verified production-source and feature integration branches; production behaviour is not changed until a separately approved release.
 
 ## Objective
 
@@ -67,4 +67,4 @@ Acceptance criteria are met with mapped evidence; relevant checks pass; independ
 
 At inspection the repository had a Cloudflare source-check CI workflow and functional/security-oriented Node tests, including multi-project ownership and transaction rollback tests. The workflow builds isolated synthetic fixtures and runs test/QA files. It does not demonstrate specification traceability, enforced TDD chronology or an operational autonomous SDLC.
 
-Adoption is incremental. Consult engineering/spec-kit-install.json for actual installation and specs/001-walk-design/verification.json for executed checks. Neither installed prompts nor a passing artifact gate establish correctness. No GitHub protection change, whole-platform certification or production release is implied.
+Adoption is incremental. Consult engineering/spec-kit-install.json for actual installation and specs/001-walk-design/verification.json for executed checks. Neither installed prompts nor a passing artifact gate establish correctness. Branch protection receipts are in the autonomous activation checkpoint. No whole-platform certification or production release is implied.
