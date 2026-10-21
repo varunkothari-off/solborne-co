@@ -2,7 +2,7 @@
 
 Date: 21 October 2026.
 
-Status: development policy established by owner instruction. Framework choice proposed: GitHub Spec Kit. Framework installation, automated policy checks, branch protection and autonomous issue execution are NOT yet implemented by this document. No production behaviour changes.
+Status: Spec Kit 1.2.2 installed with Codex skills, constitution and bundled SDD workflow. A local artifact gate and CI workflow are implemented. Feature proof and autonomous activation receipts are recorded in specs/001-walk-design/verification.md. Branch protection is not claimed configured; production behaviour is not changed until a separately approved release.
 
 ## Objective
 
@@ -67,4 +67,4 @@ Acceptance criteria are met with mapped evidence; relevant checks pass; independ
 
 At inspection the repository had a Cloudflare source-check CI workflow and functional/security-oriented Node tests, including multi-project ownership and transaction rollback tests. The workflow builds isolated synthetic fixtures and runs test/QA files. It does not demonstrate specification traceability, enforced TDD chronology or an operational autonomous SDLC.
 
-This change only adds policy and the proposed adoption design. It does not install Spec Kit, create a scheduler, change GitHub protections, certify all existing platform functionality, run a new full regression suite or deploy a release.
+Adoption is incremental. Consult engineering/spec-kit-install.json for actual installation and specs/001-walk-design/verification.json for executed checks. Neither installed prompts nor a passing artifact gate establish correctness. No GitHub protection change, whole-platform certification or production release is implied.

@@ -1,4 +1,5 @@
 import {first,run} from './db.mjs';
+import {designText} from './walk-design.mjs';
 import {aiFields} from './ai-walk-fields.mjs';
 export {aiFields} from './ai-walk-fields.mjs';
 import {generateGroundedArgonReply} from './argon-walk.mjs';
@@ -30,7 +31,7 @@ export async function generateReply(env,state,message,{fetcher=fetch}={}){
   if(model==='gemini-4-argon')return generateGroundedArgonReply(env,state,message,{fetcher});
   const transcript=state.messages.slice(-12).map(x=>`${x.role}: ${x.text}`).join('\n');
   const properties=Object.fromEntries(Object.keys(aiFields).map(k=>[k,{type:'string'}]));
-  const payload={systemInstruction:{parts:[{text:prompt}]},contents:[{role:'user',parts:[{text:JSON.stringify({facts:state.facts,businessBrief:state.businessBrief||{},template:state.template,promptVersion:WALK_PROMPT_VERSION,transcript,review:state.review,answer:message})}]}],generationConfig:{temperature:0.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{message:{type:'string'},question:{type:'string'},facts:{type:'object',properties,required:Object.keys(aiFields)},businessBrief:{type:'object',properties:Object.fromEntries(Object.keys(businessBriefFields).map(k=>[k,{type:'string'}])),required:Object.keys(businessBriefFields)},missing:{type:'array',items:{type:'string'}},ready:{type:'boolean'},template:{type:'string',enum:['editorial','story']},stage:{type:'string',enum:[...stages]}},required:['message','question','facts','businessBrief','missing','ready','template','stage']}}};
+  const payload={systemInstruction:{parts:[{text:prompt}]},contents:[{role:'user',parts:[{text:JSON.stringify({designPreferences:designText(state),facts:state.facts,businessBrief:state.businessBrief||{},template:state.template,promptVersion:WALK_PROMPT_VERSION,transcript,review:state.review,answer:message})}]}],generationConfig:{temperature:0.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{message:{type:'string'},question:{type:'string'},facts:{type:'object',properties,required:Object.keys(aiFields)},businessBrief:{type:'object',properties:Object.fromEntries(Object.keys(businessBriefFields).map(k=>[k,{type:'string'}])),required:Object.keys(businessBriefFields)},missing:{type:'array',items:{type:'string'}},ready:{type:'boolean'},template:{type:'string',enum:['editorial','story']},stage:{type:'string',enum:[...stages]}},required:['message','question','facts','businessBrief','missing','ready','template','stage']}}};
   const response=await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify(payload),signal:AbortSignal.timeout(45000)});
   if(!response.ok)throw new Error('Model temporarily unavailable');
   const raw=await response.text();if(raw.length>100000)throw new Error('Reply too large');

@@ -1,0 +1,22 @@
+{
+  "components": [
+    {
+      "name": "Signature Pad",
+      "version": "5.1.4",
+      "source": "https://github.com/szimek/signature_pad",
+      "license": "MIT",
+      "licenseFile": "cloudflare-site/public/vendor/signature-pad/LICENSE.txt",
+      "usage": "Optional Walk sketch drawing core; UMD vendor self-hosted with normalized-vector adapter",
+      "integrity": "e3ad651350055083e8f635d07598bc3a96f1e7be075977b49067d28803066af4",
+      "attribution": "Upstream copyright and MIT notice preserved; no UI credit required by this licence",
+      "assets": "No upstream example photos/fonts imported"
+    }
+  ],
+  "policy": {
+    "selection": "Business journey + audience + industry + brand preferences -> compare at least three credible candidates -> rights and mobile/source check -> one coherent base + compatible parts",
+    "sources": "Inspiration never grants code or asset rights. Mixing sources does not remove licence duties. Prefer commercial-client-compatible licences without UI attribution when owner requires that. Preserve all legal notices.",
+    "customCode": "Write only integration, missing business rules and necessary brand adaptation. Record why no suitable reusable part exists. Do not force React onto static sites for a component.",
+    "brand": "Each project owns tokens, type, page structure, imagery and motion; Solborne is not a client-site template.",
+    "measurement": "Record retained source, modifications, new code and actual review time. No unsupported percentage reuse/savings claim."
+  }
+}

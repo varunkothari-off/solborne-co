@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "checked_date": "2026-10-21",
+  "upstream": "https://github.com/github/spec-kit",
+  "upstream_release": "v1.2.2",
+  "package": "specify-cli==1.2.2",
+  "package_source": "PyPI",
+  "runtime": "External task-local Python venv; not a repository dependency",
+  "python": "3.14.2",
+  "integration": "codex",
+  "integration_options": "--skills",
+  "script_type": "ps",
+  "init_command": "specify init --here --force --non-interactive --integration codex --script ps --integration-options=\"--skills\"",
+  "init_exit_code": 0,
+  "bundled_workflow": {
+    "version": "1.0.1",
+    "name": "Full SDD Cycle",
+    "id": "speckit"
+  },
+  "generated_skill_count": 10,
+  "inventory_artifact_count": 19,
+  "constitution_version": "1.0.0",
+  "upstream_license": ".specify/UPSTREAM-LICENSE",
+  "verified": [
+    "CLI reports version 1.2.2",
+    "Non-interactive Codex skills initialization completed",
+    "spec-template resolver returned nonempty TEMPLATE_CONTENT",
+    "constitution-template resolver succeeded",
+    "Artifact inventory parsed as JSON",
+    "Workflow list reports Full SDD Cycle 1.0.1",
+    "No extension hooks configured"
+  ],
+  "telemetry_note": "No telemetry extension installed and no documented telemetry preference was found in inspected Specify CLI 1.2.2 commands/source; do not equate this with a verified network audit.",
+  "limitations": [
+    "Skill scaffolding is installed; human/agent execution of feature steps remains separate",
+    "No enforcement or scheduler is created by initialization",
+    "No new paid account, model provider or deployment connection created"
+  ]
+}

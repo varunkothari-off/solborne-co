@@ -1,0 +1,70 @@
+{
+  "feature": "001-walk-design",
+  "spec": "specs/001-walk-design/spec.md",
+  "plan": "specs/001-walk-design/plan.md",
+  "tasks": "specs/001-walk-design/tasks.md",
+  "acceptance": [
+    {
+      "id": "AC-01",
+      "tests": [
+        "cloudflare-site/test/walk-design.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "tests": [
+        "cloudflare-site/test/walk-design-ui.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "tests": [
+        "cloudflare-site/test/walk-design.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-04",
+      "tests": [
+        "cloudflare-site/test/walk-design.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-05",
+      "tests": [
+        "cloudflare-site/test/walk-design.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-06",
+      "tests": [
+        "cloudflare-site/test/walk-design-ui.test.mjs"
+      ]
+    }
+  ],
+  "tdd": {
+    "red": {
+      "commit": "020b1cb",
+      "command": "cd cloudflare-site && node --test test/walk-design.test.mjs",
+      "result": "failed",
+      "reason": "POST design endpoint returned405 before implementation; acceptance test expected200. Red committed before production implementation. SQLite fixture batch adapter corrected after endpoint implementation exposed DATABASE_UNAVAILABLE; assertions retained."
+    },
+    "green": {
+      "command": "cd cloudflare-site && npm run build && npm test; node --test engineering/check-sdlc.test.mjs",
+      "result": "passed"
+    }
+  },
+  "review": {
+    "status": "passed",
+    "report": "engineering/review-walk-design.md"
+  },
+  "reuse": {
+    "manifest": "engineering/reuse-registry.json"
+  },
+  "limitations": [
+    "Local synthetic browser/API preview only, not production deployment or a real-user login/provider call.",
+    "243 platform tests and14gate tests pass locally; remote CI is tracked separately in the PR.",
+    "Mobile width emulation does not establish real phone or stylus behaviour.",
+    "Artifact gate cannot establish semantic correctness, reviewer independence or test chronology by itself.",
+    "No GitHub branch protections changed. Autonomous worker activation is recorded separately after this proof."
+  ]
+}

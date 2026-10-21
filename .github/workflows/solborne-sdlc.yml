@@ -1,0 +1,21 @@
+name: Solborne SDLC evidence
+on:
+  pull_request: {}
+  push:
+    paths: ['cloudflare-site/**', 'engineering/**', 'specs/**', 'AGENTS.md', '.specify/**', '.agents/skills/speckit-*/**', '.github/**']
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test valid and rejected evidence cases
+        run: node --test engineering/check-sdlc.test.mjs
+      - name: Validate specification, acceptance, test and reuse records
+        run: node engineering/check-sdlc.mjs
+# Functional build and platform regressions remain in solborne-cloudflare.yml.
+# This workflow neither deploys nor establishes mandatory branch protection.
