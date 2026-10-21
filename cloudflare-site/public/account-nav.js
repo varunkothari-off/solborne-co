@@ -21,6 +21,7 @@
     for (const link of document.querySelectorAll('main a[href="/signin.html?next=walk"]')) {
       link.href = session.registered?'/walk.html':'/start.html';
     }
+    if(!nav.querySelector('a[href="/canvas.html"]')){const projects=document.createElement('a');projects.href='/canvas.html';projects.textContent='Your projects';if(current==='/canvas.html')projects.setAttribute('aria-current','page');nav.append(projects);}
     const button = document.createElement('button');
     button.type = 'button'; button.id = 'signout'; button.className = 'nav-signout'; button.textContent = 'Sign out';
     button.addEventListener('click', async () => {

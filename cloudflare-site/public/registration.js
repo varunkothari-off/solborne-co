@@ -47,6 +47,7 @@ form.addEventListener('submit',async event=>{
   if(!csrf){show('Refresh the form connection before submitting. Your entries have been kept.',true);retry.hidden=false;return;}
   busy=true;submit.disabled=true;recoveryFile.disabled=true;submit.textContent=importedAttempt?'Checking your saved registration...':'Saving your enquiry...';show(importedAttempt?'Checking this receipt and the original details against your saved registration.':'Saving your enquiry securely.');retry.hidden=true;
   const payload={name:form.elements.name.value,contact:form.elements.contact.value,enquiryType:form.elements.enquiryType.value,permissionToRespond:form.elements.permissionToRespond.checked,website:form.elements.website.value,csrf,idempotencyKey};
+  if(!importedAttempt&&form.elements.projectName?.value.trim())payload.projectName=form.elements.projectName.value.trim();
   if(importedAttempt)payload.expectedReceipt=importedAttempt.receipt;
   try{
     const response=await fetch('/api/registrations',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});const data=await response.json();

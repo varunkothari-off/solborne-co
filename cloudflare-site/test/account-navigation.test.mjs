@@ -35,7 +35,7 @@ test('private journey pages share logo, navigation and footer, and canvas keeps 
   const html=source(name);assert.match(html,/src="\/assets\/bearing.svg"/);assert.match(html,/id="site-nav"/);assert.match(html,/\/journey-shell.css/);assert.match(html,/\/account-nav.js/);assert.match(html,/aria-label="Footer navigation"/);
   assert.doesNotMatch(html,/href="\/#(?:approach|questions|register)"/);
  }
- const canvas=source('canvas.html');assert.match(canvas,/Take the Walk of Fame/);assert.match(canvas,/website files are free to keep/);assert.match(canvas,/class="another-business"/);assert.doesNotMatch(canvas,/<button id="signout"/);
+ const canvas=source('canvas.html');assert.match(canvas,/Take the Walk of Fame/);assert.match(canvas,/website files are free to keep/);assert.match(canvas,/New project/);assert.match(canvas,/id="saved-list"/);assert.doesNotMatch(canvas,/<button id="signout"/);
 });
 
 test('session loader follows the shared request lifecycle on success and failure',async()=>{

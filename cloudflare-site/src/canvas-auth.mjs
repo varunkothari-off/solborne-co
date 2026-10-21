@@ -39,7 +39,14 @@ export async function authRoute(request,env,now,{fetcher=fetch}={}){
   if(path==='/api/auth/session'&&request.method==='GET'){
     if(request.headers.get('Sec-Fetch-Site')==='cross-site')return failure();
     const configured=authConfigured(env),enabled=authEnabled(env);const user=await authIdentity(request,env,now,fetcher);
-    const registrations=user?await all(env,'SELECT a.registration_id AS id,a.created_at AS createdAt,r.enquiry_type AS enquiryType FROM solborne_auth_registrations a JOIN solborne_registrations r ON r.id=a.registration_id WHERE a.user_id=? ORDER BY a.created_at DESC,a.registration_id DESC',[user.id]):[];
+    const rows=user?await all(env,`SELECT a.registration_id AS id,a.created_at AS createdAt,r.enquiry_type AS enquiryType,w.state_json,
+      (SELECT c.website_facts_json FROM solborne_walk_completions c WHERE c.registration_id=a.registration_id ORDER BY c.created_at DESC,c.id DESC LIMIT 1) AS latest_facts,
+      EXISTS(SELECT 1 FROM solborne_walk_completions c JOIN solborne_website_releases d ON d.completion_id=c.id WHERE c.registration_id=a.registration_id) AS has_release
+      FROM solborne_auth_registrations a JOIN solborne_registrations r ON r.id=a.registration_id LEFT JOIN solborne_ai_walks w ON w.registration_id=a.registration_id WHERE a.user_id=? ORDER BY a.created_at DESC,a.registration_id DESC`,[user.id]):[];
+    const registrations=rows.map(({state_json,latest_facts,has_release,...item})=>{
+      let state={},facts={};try{state=JSON.parse(state_json||'{}');facts=JSON.parse(latest_facts||'{}');}catch{/* A damaged legacy draft must not expose private data or break other projects. */}
+      return {...item,projectName:String(state.facts?.businessName||facts.businessName||'Untitled project').slice(0,120),website:String(state.facts?.websiteUrl||facts.websiteUrl||'').slice(0,1500),projectStatus:has_release?'delivered':state.submission?'awaiting_manual_review':state.ready?'brief_ready':'in_progress',submittedAt:state.submission?.submittedAt||null};
+    });
     let csrf=cookie(request,CSRF);if(!hex.test(csrf))csrf=random();
     return json({ok:true,configured,enabled,providers:{google:enabled&&configured&&env.AUTH_GOOGLE_ENABLED==='true',email:enabled&&configured&&env.AUTH_EMAIL_ENABLED==='true'},authenticated:!!user,user:user?{email:user.email,name:user.name}:null,registered:!!user?.registration_id,activeRegistration:user?.registration_id||null,registrations,csrf},200,{'Set-Cookie':setCookie(CSRF,csrf)});
   }

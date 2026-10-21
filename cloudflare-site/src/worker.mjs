@@ -1,4 +1,5 @@
 import {createLiveToken} from './walk-live-token.mjs';
+import {publicMetrics} from './public-metrics.mjs';
 import { authRoute, authEnabled, authIdentity } from './canvas-auth.mjs';
 import {flushPresales} from './presales-sync.mjs';
 import { database, first, all, run, rateLimit, cleanup } from './db.mjs';
@@ -60,7 +61,9 @@ function validate(input) {
   if(typeof input.idempotencyKey!=='string'||!/^[a-f0-9]{64}$/.test(input.idempotencyKey)) return null;
   if(typeof input.csrf!=='string'||!/^[a-f0-9]{64}$/.test(input.csrf)) return null;
   if(input.website !== undefined && input.website !== '')return null;
-  return {name,contact,enquiryType:input.enquiryType,permissionToRespond:true};
+  let projectName;
+  if(input.projectName!==undefined){if(typeof input.projectName!=='string')return null;projectName=input.projectName.trim().normalize('NFKC');if(projectName.length<1||projectName.length>120||/[\x00-\x1f\x7f]/.test(projectName))return null;}
+  return {name,contact,enquiryType:input.enquiryType,permissionToRespond:true,...(projectName?{projectName}:{})};
 }
 function receipt(row,replayed=false,headers={}) { return json({ok:true,receipt:row.id,submittedAt:new Date(row.created_at).toISOString(),replayed,message:'Your enquiry has been saved for Solborne to review. Complete the Walk of Fame to submit your public website facts for team processing.'},replayed?200:201,headers); }
 async function createSession(request,env,now) {
@@ -99,7 +102,10 @@ async function register(request,env,now,authFetch=fetch) {
     // Keep the readiness condition in the insert too, in case configuration changes mid-request.
     const insertSQL="INSERT INTO solborne_registrations (id,idempotency_key,payload_hash,name,contact,enquiry_type,permission_to_respond,consent_version,created_at) SELECT ?,?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM solborne_intake_control WHERE id=1 AND enabled=1 AND policy_version=?)";
     const values=[id,key,payloadHash,data.name,data.contact,data.enquiryType,1,CONSENT_VERSION,now,CONSENT_VERSION];
-    const saved=identity?(await database(env).batch([database(env).prepare(insertSQL).bind(...values),database(env).prepare("INSERT INTO solborne_auth_registrations(user_id,registration_id,created_at) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM solborne_registrations WHERE id=?)").bind(identity.id,id,now,id),database(env).prepare("UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=? AND user_id=? AND EXISTS(SELECT 1 FROM solborne_auth_registrations WHERE user_id=? AND registration_id=?)").bind(id,identity.sessionHash,identity.id,identity.id,id)]))[0]:await run(env,insertSQL,values);
+    const operations=[database(env).prepare(insertSQL).bind(...values)];
+    if(identity){operations.push(database(env).prepare("INSERT INTO solborne_auth_registrations(user_id,registration_id,created_at) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM solborne_registrations WHERE id=?)").bind(identity.id,id,now,id),database(env).prepare("UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=? AND user_id=? AND EXISTS(SELECT 1 FROM solborne_auth_registrations WHERE user_id=? AND registration_id=?)").bind(id,identity.sessionHash,identity.id,identity.id,id));}
+    if(data.projectName)operations.push(database(env).prepare('INSERT INTO solborne_ai_walks(registration_id,state_json,created_at,updated_at) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM solborne_registrations WHERE id=?)').bind(id,JSON.stringify({messages:[],facts:{businessName:data.projectName},businessBrief:{},missing:[],ready:false,template:'editorial',stage:'business',review:null}),now,now,id));
+    const saved=(await database(env).batch(operations))[0];
     if(!(saved.meta?.changes>=1))return error('Registration is temporarily unavailable. Please try again later.',503,'registration_unavailable');
   }
   catch(cause){const raced=await first(env,'SELECT id,payload_hash,created_at FROM solborne_registrations WHERE idempotency_key=?',[key]);if(raced){if(identity){const linked=await first(env,'SELECT registration_id FROM solborne_auth_registrations WHERE user_id=? AND registration_id=?',[identity.id,raced.id]);if(!linked)return error('This saved enquiry belongs to a different sign-in.',403,'identity_mismatch');await run(env,'UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=? AND user_id=?',[raced.id,identity.sessionHash,identity.id]);}return raced.payload_hash===payloadHash?await authorizedReceipt(request,env,raced,now,true,authFetch):error('This attempt was already used for different details.',409,'idempotency_conflict');}throw cause;}
@@ -126,12 +132,15 @@ async function serveAsset(request,path,env={}) {
 export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch,authFetch=fetch}={}) {
   const now=clock(),url=new URL(request.url),path=url.pathname;
   try {
+    if(path==='/api/public-metrics'&&request.method==='GET'){
+      try{return json({ok:true,...await publicMetrics(env,{fetcher:modelFetch})});}catch{return error('Counts are temporarily unavailable.',503,'metrics_unavailable');}
+    }
     const authResponse=await authRoute(request,env,now,{fetcher:authFetch});if(authResponse)return authResponse;
     if(['GET','HEAD'].includes(request.method)&&['/index.html','/improve.html'].includes(path))return new Response(null,{status:301,headers:{...safeHeaders,Location:(path==='/index.html'?'/':'/websites.html')+url.search,'Cache-Control':'no-cache'}});
     if(path==='/api/ai-walk/status'&&request.method==='GET')return json({ok:true,enabled:providerReady(env)});
     if(['/api/ai-walk','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete','/api/ai-walk/submit','/api/ai-walk/transcribe','/api/ai-walk/live-token'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
       if(!await intakeReady(env))return error('The Walk is temporarily unavailable.',503,'registration_unavailable');
-      const access=await accessFor(request,env,now);if(!access)return error('Save your basic details first.',403,'registration_required');
+      const access=await accessFor(request,env,now,authFetch);if(!access)return error('Save your basic details first.',403,'registration_required');
       if(['/api/ai-walk/preview','/api/ai-walk/complete'].includes(path)&&env.AI_WEBSITE_BUILD_ENABLED!=='true')return error('Website preparation follows team research and design approval. This Walk saves your business brief only.',503,'manual_design_required');
       if(request.method==='GET'){
         const {row,state}=await loadDraft(env,access.registration_id);
@@ -170,7 +179,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     if(path==='/api/registration-session'&&request.method==='GET')return await createSession(request,env,now);
     if(path==='/api/registrations'&&request.method==='POST')return await register(request,env,now,authFetch);
     if(path==='/admin'||path.startsWith('/admin/')||path.startsWith('/api/admin/')||path==='/signin-with-chatgpt'||path==='/signout-with-chatgpt')return error('This page was not found.',404,'not_found');
-    if(path==='/api/access/status'&&request.method==='GET'){const access=await accessFor(request,env,now);return access?json({ok:true,registered:true}):error('Save your basic details first.',403,'registration_required');}
+    if(path==='/api/access/status'&&request.method==='GET'){const access=await accessFor(request,env,now,authFetch);return access?json({ok:true,registered:true}):error('Save your basic details first.',403,'registration_required');}
     if(path==='/api/walk/complete'&&request.method==='POST')return await completeWalk(request,env,now);
     if(path==='/api/walk/revisions'&&request.method==='POST')return await reviseWebsite(request,env,now);
     if((path==='/api/walk/versions'||path.startsWith('/api/walk/versions/'))&&request.method==='GET')return await websiteVersions(request,env,now);
@@ -211,7 +220,14 @@ async function authorizedReceipt(request,env,row,now,replayed=false,authFetch=fe
   return receipt(row,replayed,{'Set-Cookie':`__Host-solborne_access=${opaque}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=86400`});
 }
 async function accessFor(request,env,now,authFetch=fetch){
-  if(authEnabled(env)){const user=await authIdentity(request,env,now,authFetch);return user?.registration_id?{registration_id:user.registration_id}:null;}
+  if(authEnabled(env)){
+    const user=await authIdentity(request,env,now,authFetch);if(!user)return null;
+    const pinned=request.headers.get('X-Solborne-Project');
+    if(pinned){if(!REGISTRATION_ID.test(pinned))return null;const owned=await first(env,'SELECT registration_id FROM solborne_auth_registrations WHERE user_id=? AND registration_id=?',[user.id,pinned]);return owned?{registration_id:owned.registration_id}:null;}
+    // Old/unbound tabs may read status but cannot submit into another selected project.
+    if(!['GET','HEAD'].includes(request.method))return null;
+    return user.registration_id?{registration_id:user.registration_id}:null;
+  }
   const opaque=cookieNamed(request,'__Host-solborne_access');if(!/^[a-f0-9]{64}$/.test(opaque))return null;
   return await first(env,'SELECT g.registration_id FROM solborne_access_grants g JOIN solborne_registrations r ON r.id=g.registration_id WHERE g.token_hash=? AND g.expires_at>?',[await digest(opaque),now]);
 }
