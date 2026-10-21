@@ -5,10 +5,6 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test --experimental-test-isolation=none test/*.test.mjs qa/*.test.mjs",
-    "test:browser": "node qa/reviewed-delivery-journey.mjs",
-    "test:reviewed-delivery": "node qa/reviewed-delivery-journey.mjs",
-    "test:owner-local": "node qa/owner-local-evidence.mjs",
-    "test:security": "node evidence/reviewed-delivery-security-probe.mjs"
+    "test": "node --test --experimental-test-isolation=none test/*.test.mjs qa/*.test.mjs"
   }
 }
