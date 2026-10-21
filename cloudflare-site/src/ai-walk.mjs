@@ -98,7 +98,7 @@ export async function answerDraft(env,registration,input,now,{fetcher=fetch}={})
   if(row.calls>=40)return {status:429,body:{ok:false,error:'This Walk has reached its model-call limit. Review your brief or contact Solborne.'}};
   const claim=await run(env,'UPDATE solborne_ai_walks SET busy_until=?,calls=calls+1 WHERE registration_id=? AND revision=? AND busy_until<=? AND calls<40',[now+60000,registration,input.revision,now]);
   if(!(claim.meta?.changes>=1))return {status:409,body:{ok:false,error:'An answer is already being processed. Refresh your saved conversation shortly.'}};
-  const originatingQuestion=pending?.question??state.question??state.messages.filter(m=>m.role==='assistant').at(-1)?.text??'';
+  const originatingQuestion=pending?.question||state.question||state.messages.filter(m=>m.role==='assistant').at(-1)?.text||'Let’s start with your story. Tell me about your business.';
   if(!pending||!ownerMessages.some(item=>item.id===turn))ownerMessages.push({id:turn,text:message});
   const pendingAnswer={id:turn,text:message,sketch,question:originatingQuestion};
   let callState={...state,ownerMessages,pendingAnswer};

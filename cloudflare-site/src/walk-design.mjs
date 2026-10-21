@@ -36,7 +36,7 @@ export async function saveAnswerSketch(env,registration,input,now){
  if(index<0)return {status:422,body:{ok:false,error:'Choose a saved answer from this Walk.'}};
  if(!withinSketchBudget(state.answerSketches,input.turn,strokes))return {status:422,body:{ok:false,error:'This Walk has many drawings. Clear an older sketch or simplify this one before saving.'}};
  const existing=(state.answerSketches||[]).find(item=>item.turn===input.turn),message=state.messages[index];
- const question=existing?.question??message.question??state.messages.slice(0,index).filter(item=>item.role==='assistant').at(-1)?.text??'';
+ const question=existing?.question||message.question||state.messages.slice(0,index).filter(item=>item.role==='assistant').at(-1)?.text||(input.turn===1?'Let’s start with your story. Tell me about your business.':'');
  const answerSketches=(state.answerSketches||[]).filter(item=>item.turn!==input.turn);if(strokes.length)answerSketches.push({turn:input.turn,question,strokes});answerSketches.sort((a,b)=>a.turn-b.turn);
  const next={...state,answerSketches,review:null};
  const saved=await run(env,'UPDATE solborne_ai_walks SET state_json=?,revision=revision+1,updated_at=? WHERE registration_id=? AND revision=? AND busy_until<=?',[JSON.stringify(next),now,registration,input.revision,now]);

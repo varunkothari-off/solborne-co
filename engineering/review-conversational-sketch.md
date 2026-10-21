@@ -70,3 +70,7 @@ This review did not make paid model calls, deploy to solborne.in, insert real cu
 ## Coordinator closeout
 
 Formatting normalized after review; git diff --check verified clean before commit. Actual browser sent text+sketch, edited answer1 with Send disabled, preserved and sent the next draft, reloaded both saved answers and sketch; mobile375CSSpx scrollWidth375 and zero standalone design forms, two per-answer actions. Synthetic local backend only, no paid provider or hosted sketch insert.
+
+## Introductory-question release regression review
+
+Independent reviewer inspected the two-line fallback correction and reran all12answer-sketch tests: passed,0failed. Empty initial and legacy first-answer question fields now fall through to the exact displayed introduction; nonempty saved questions are preserved. No blocking finding. Parent fullsuite267passed.
