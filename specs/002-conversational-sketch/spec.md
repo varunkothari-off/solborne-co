@@ -8,3 +8,5 @@ Owner correction,21October2026: design discovery belongs in the conversational W
 - AC-04: Failed saves retain the local drawing and text. Successful saves persist to the Walk and existing Solborne outbox/manual handoff, not KFS. Local synthetic preview uses an in-memory DB and no hosted sync; production uses configured D1 plus Solborne Supabase presales sync. Verify and report scope honestly; no deployment is authorised by this correction.
 
 Drawing bounds: at most80strokes/2000normalizedpoints per sketch,20000points across the Walk,131072bytes for a past-sketch save. These bound drawing payloads and do not add a text-answer character limit.
+
+Release regression for AC-03: the first answer uses the displayed introductory question even when the initial state has no stored question or an empty question. Editing a legacy first-answer sketch with empty question metadata restores that introduction without a model call.

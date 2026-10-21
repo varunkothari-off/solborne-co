@@ -23,6 +23,12 @@ test('answer sketch is linked to its originating question and stable owner turn,
  const read=await(await f.call('/api/ai-walk')).json();assert.deepEqual(read.state.answerSketches,state.answerSketches);
  assert.equal((await f.post({revision:1,message:'We repair furniture.'})).status,200);state=f.state();assert.equal(state.messages.filter(m=>m.role==='user')[1].turn,2);assert.equal(state.ownerMessages[1].id,2);assert.equal(state.answerSketches.length,1);
 });
+test('first answer sketches retain the displayed introduction when no model question exists',async t=>{
+ for(const question of [undefined,'']){const f=await fixture(t);f.setState({...f.state(),question});assert.equal((await f.post({sketch})).status,200);const expected='Let’s start with your story. Tell me about your business.';assert.equal(f.state().answerSketches[0].question,expected);assert.equal(f.state().messages.find(m=>m.role==='user').question,expected);}
+});
+test('editing a legacy first answer sketch repairs its empty introductory question',async t=>{
+ const f=await fixture(t);f.setState({...f.state(),messages:[{role:'user',text:'Our workshop.',turn:1,question:''}],answerSketches:[{turn:1,question:'',strokes:sketch}]});assert.equal((await f.post({turn:1,sketch},{},'/api/ai-walk/sketch')).status,200);assert.equal(f.state().answerSketches[0].question,'Let’s start with your story. Tell me about your business.');assert.equal(f.calls(),0);
+});
 test('a sketch-only answer uses a literal marker without sending raw drawing coordinates to either model',async t=>{
  for(const model of ['gemini-4-argon','gemini-3.1-flash-lite'])for(const message of ['',undefined]){const f=await fixture(t);f.env.GEMINI_MODEL=model;const result=await f.post({message,sketch});assert.equal(result.status,200);assert.equal(f.state().messages.find(m=>m.role==='user').text,'[Sketch attached]');assert.deepEqual(f.state().answerSketches[0].strokes,sketch);const payload=JSON.stringify(f.payloads);assert.ok(payload.includes('[Sketch attached]'));assert.ok(!payload.includes('0.137'));assert.ok(!payload.includes('0.219'));}
 });
