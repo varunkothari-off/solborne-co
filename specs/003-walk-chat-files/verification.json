@@ -1,0 +1,17 @@
+{
+  "feature":"003-walk-chat-files",
+  "spec":"specs/003-walk-chat-files/spec.md",
+  "plan":"specs/003-walk-chat-files/plan.md",
+  "tasks":"specs/003-walk-chat-files/tasks.md",
+  "acceptance":[
+    {"id":"AC-01","tests":["cloudflare-site/test/ai-walk-frontend.test.mjs"]},
+    {"id":"AC-02","tests":["cloudflare-site/test/walk-composer.test.mjs","cloudflare-site/test/ai-walk-frontend.test.mjs"]},
+    {"id":"AC-03","tests":["cloudflare-site/test/walk-composer.test.mjs","cloudflare-site/test/ai-walk-frontend.test.mjs"]},
+    {"id":"AC-04","tests":["cloudflare-site/test/walk-files.test.mjs"]},
+    {"id":"AC-05","tests":["cloudflare-site/test/walk-files.test.mjs","cloudflare-site/test/conversational-design.test.mjs"]}
+  ],
+  "tdd":{"red":{"commit":"64f7f16","command":"cd cloudflare-site && node --test test/ai-walk-frontend.test.mjs","result":"failed","reason":"Actual page rendered dotted internal field names instead of public labels. Separate private red logs record missing upload routes and later reproduced uncertainty, throttling, restore-order and scroll regressions before their fixes."},"green":{"command":"cd cloudflare-site && npm run build && npm test","result":"passed"}},
+  "review":{"status":"passed","report":"engineering/review-walk-chat-files.md"},
+  "reuse":{"manifest":"engineering/reuse-registry.json"},
+  "limitations":["298 tests passed locally; browser tests use synthetic SQLite and an in-memory R2 stub.","No production deployment or R2 bucket provisioning in this pass. Hosted presales file metadata sync is covered synthetically, not live-verified.","Attachments are stored for human review. Models receive metadata only, not file contents or visual interpretation.","Signatures, types and extensions are checked; files are not malware-certified and OOXML is not extracted.","Phone viewport emulation is not physical phone or microphone certification. No customer email reply was sent."]
+}

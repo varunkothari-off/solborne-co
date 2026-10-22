@@ -25,6 +25,7 @@
       "database_id": "f1b2e60a-766d-4cbb-af2a-4bf66badfc69"
     }
   ],
+  "r2_buckets": [{"binding":"WALK_FILES","bucket_name":"solborne-walk-private-20261022"}],
   "triggers": {
     "crons": [
       "*/5 * * * *"
