@@ -12,6 +12,7 @@
     "AI_WEBSITE_BUILD_ENABLED": "false",
     "GEMINI_MODEL": "gemini-4-argon",
     "GEMINI_LIVE_TRANSCRIPTION_ENABLED": "true",
+    "SUPABASE_WALK_FILES_ENABLED": "true",
     "SUPABASE_URL": "https://jzbbvlmfsatjqgfubhon.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_NmJeO2UBhZxIvBGNYv2Q4w_XtEx8ZnO",
     "AUTH_ENABLED": "true",
@@ -25,7 +26,6 @@
       "database_id": "f1b2e60a-766d-4cbb-af2a-4bf66badfc69"
     }
   ],
-  "r2_buckets": [{"binding":"WALK_FILES","bucket_name":"solborne-walk-private-20261022"}],
   "triggers": {
     "crons": [
       "*/5 * * * *"

@@ -1,3 +1,4 @@
+import {storageFor} from './walk-storage.mjs';
 import {uploadWalkFile,downloadWalkFile,resolveAnswerFiles,resetWalkWithFiles} from './walk-files.mjs';
 import {createLiveToken} from './walk-live-token.mjs';
 import {saveDesignPreferences,saveAnswerSketch,validateSketch} from './walk-design.mjs';
@@ -157,7 +158,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
         const {row,state}=await loadDraft(env,access.registration_id);
         if(path==='/api/ai-walk/preview'){if(!state.review)return error('Run the reviews before opening a draft.',422,'review_required');return json({ok:true,html:renderAIPortfolio(state,templateCSS(state)),template:state.template});}
         if(path!=='/api/ai-walk')return error('Use the correct action.',405,'method_not_allowed');
-        return json({ok:true,enabled:providerReady(env),uploadsEnabled:!!env.WALK_FILES,state,revision:row?.revision||0,...(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true'?{voiceMode:'live'}:{})});
+        return json({ok:true,enabled:providerReady(env),uploadsEnabled:!!storageFor(env),state,revision:row?.revision||0,...(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true'?{voiceMode:'live'}:{})});
       }
       if(!validOrigin(request,env))return error('Open the Walk directly and try again.',403,'origin_required');
       const input=await readJson(request,path==='/api/ai-walk/transcribe'?MAX_AUDIO_BODY:path==='/api/ai-walk'?262144:['/api/ai-walk/design','/api/ai-walk/sketch'].includes(path)?131072:8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');

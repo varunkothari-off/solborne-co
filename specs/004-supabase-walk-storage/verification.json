@@ -1,0 +1,60 @@
+{
+  "feature": "004-supabase-walk-storage",
+  "spec": "specs/004-supabase-walk-storage/spec.md",
+  "plan": "specs/004-supabase-walk-storage/plan.md",
+  "tasks": "specs/004-supabase-walk-storage/tasks.md",
+  "acceptance": [
+    {
+      "id": "AC-01",
+      "tests": [
+        "cloudflare-site/test/walk-storage.test.mjs",
+        "cloudflare-site/test/solborne-files-function.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "tests": [
+        "cloudflare-site/test/walk-files.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "tests": [
+        "specs/004-supabase-walk-storage/manual-checks.md"
+      ],
+      "status": "pending_source_files"
+    },
+    {
+      "id": "AC-04",
+      "tests": [
+        "specs/004-supabase-walk-storage/manual-checks.md"
+      ],
+      "status": "partial_research_only"
+    }
+  ],
+  "tdd": {
+    "red": {
+      "commit": "7f35b5e",
+      "command": "node --test test/walk-storage.test.mjs test/solborne-files-function.test.mjs",
+      "result": "failed",
+      "reason": "Agent observed seven missing provider behaviour failures then two failures for duplicate status mapping and concurrent bounded deletes; baseline commit identifies preimplementation state, not a committed failing test snapshot."
+    },
+    "green": {
+      "command": "npm test; npm run build",
+      "result": "passed"
+    }
+  },
+  "review": {
+    "status": "passed",
+    "report": "engineering/review-supabase-walk-storage.md"
+  },
+  "reuse": {
+    "manifest": "engineering/reuse-registry.json"
+  },
+  "limitations": [
+    "311 platform tests passed; authenticated live storage round trip not yet verified.",
+    "Grammable email attachments not yet downloaded/imported; manual AC03 pending.",
+    "Research complete; asset-driven preview not built. AC04 partial.",
+    "Red-to-green observed by implementation agent; no preserved committed failing test snapshot claimed."
+  ]
+}
