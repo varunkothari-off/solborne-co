@@ -8,3 +8,5 @@ Parent validation: 311 platform tests passed, build succeeded. Hosted bucket pri
 
 Pending: authenticated hosted upload/download, actual emailed Grammable byte import and asset-driven preview. These are not established by unit tests or this review. Rollback Worker to3d8ad27a-2926-4df4-920e-dd814a053d11; keep private objects/table intact and disable flag if storage fails. Never delete imported customer data as rollback.
 
+
+Live runtime follow-up: workerd rejected redirect:error before network. Regression commit7813894 fails as intended; fix uses manual and existing non-ok rejection, preventing credential forwarding to redirects. New total312 tests. Hosted retest required.

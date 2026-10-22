@@ -34,10 +34,10 @@
   ],
   "tdd": {
     "red": {
-      "commit": "7f35b5e",
-      "command": "node --test test/walk-storage.test.mjs test/solborne-files-function.test.mjs",
+      "commit": "7813894",
+      "command": "cd cloudflare-site; node --test test/walk-storage.test.mjs",
       "result": "failed",
-      "reason": "Agent observed seven missing provider behaviour failures then two failures for duplicate status mapping and concurrent bounded deletes; baseline commit identifies preimplementation state, not a committed failing test snapshot."
+      "reason": "Live upload reproduced a workerd transport incompatibility; new regression failed on Unsupported redirect mode before network. Preserved private supabase-redirect-red.log. Previous broader red-to-green was observed by agent tool output only."
     },
     "green": {
       "command": "npm test; npm run build",
@@ -52,7 +52,7 @@
     "manifest": "engineering/reuse-registry.json"
   },
   "limitations": [
-    "311 platform tests passed; authenticated live storage round trip not yet verified.",
+    "312 platform tests passed. First live upload caught unsupported redirect:error; corrected to manual with redirect rejection. Authenticated live retest pending.",
     "Grammable email attachments not yet downloaded/imported; manual AC03 pending.",
     "Research complete; asset-driven preview not built. AC04 partial.",
     "Red-to-green observed by implementation agent; no preserved committed failing test snapshot claimed."

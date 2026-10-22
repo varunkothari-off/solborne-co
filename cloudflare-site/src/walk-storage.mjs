@@ -7,7 +7,7 @@ export function storageFor(env,{fetcher=fetch}={}){
  if(env.SUPABASE_WALK_FILES_ENABLED!=='true'||env.SUPABASE_URL!==PROJECT||!env.SOLBORNE_PRESALES_TOKEN)return null;
  async function call(method,key,body,extra={}){
   if(typeof key!=='string'||!KEY.test(key))throw Error('Invalid private object key');
-  const response=await fetcher(PROJECT+'/functions/v1/solborne-files?key='+encodeURIComponent(key),{method,headers:{Authorization:'Bearer '+env.SOLBORNE_PRESALES_TOKEN,...extra},...(body?{body}:{}),redirect:'error',signal:AbortSignal.timeout(25000)});
+  const response=await fetcher(PROJECT+'/functions/v1/solborne-files?key='+encodeURIComponent(key),{method,headers:{Authorization:'Bearer '+env.SOLBORNE_PRESALES_TOKEN,...extra},...(body?{body}:{}),redirect:'manual',signal:AbortSignal.timeout(25000)});
   if(method==='GET'&&response.status===404)return null;
   if(!response.ok)throw Error('Private file storage unavailable');
   return response;
