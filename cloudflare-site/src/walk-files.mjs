@@ -1,3 +1,4 @@
+import {storageFor} from './walk-storage.mjs';
 import {first,run,rateLimit} from './db.mjs';
 export const MAX_WALK_FILE_BYTES=5*1024*1024;
 const MAX_PROJECT_BYTES=20*1024*1024,MAX_PROJECT_FILES=20;
@@ -37,7 +38,8 @@ function validateBytes(bytes,type){
  throw Error('The file does not match its type.');
 }
 export async function uploadWalkFile(request,env,registration,now){
- if(!env.WALK_FILES?.put||!env.WALK_FILES?.delete)return result(503,'File uploads are temporarily unavailable. Your answer is still here.');
+ const storage=storageFor(env);
+ if(!storage)return result(503,'File uploads are temporarily unavailable. Your answer is still here.');
  const revisionHeader=request.headers.get('X-Walk-Revision')||'';if(!/^\d+$/.test(revisionHeader)||!Number.isSafeInteger(Number(revisionHeader)))return result(422,'Refresh your Walk before uploading.');const revision=Number(revisionHeader);
  const type=(request.headers.get('Content-Type')||'').toLowerCase().split(';')[0].trim();if(!extensions[type])return result(415,'Use a photo, PDF, plain-text, DOCX, XLSX or PPTX file.');
  let name,bytes;try{name=fileName(request,type);}catch{return result(422,'Choose a file with the correct extension.');}
@@ -51,16 +53,16 @@ export async function uploadWalkFile(request,env,registration,now){
  const id=crypto.randomUUID(),key=registration+'/'+id;let committed=false,attempted=false;
  try{
   const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
-  attempted=true;const object=await env.WALK_FILES.put(key,bytes,{httpMetadata:{contentType:type},customMetadata:{registrationId:registration,sha256:hash}});if(!object)throw Error('Upload unavailable');
+  attempted=true;const object=await storage.put(key,bytes,{httpMetadata:{contentType:type},customMetadata:{registrationId:registration,sha256:hash}});if(!object)throw Error('Upload unavailable');
   const file={id,name,type,size:bytes.length,key,url:'/api/ai-walk/files/'+id,sha256:hash},next={...state,fileLibrary:[...library,file]};
   const saved=await run(env,'UPDATE solborne_ai_walks SET state_json=?,revision=revision+1,busy_until=0,updated_at=? WHERE registration_id=? AND revision=? AND busy_until=?',[JSON.stringify(next),now,registration,revision,lease]);
   if(!(saved.meta?.changes>=1))return result(409,'Your Walk changed. The file was not attached; please try again.');committed=true;return {status:201,body:{ok:true,file:metadata(file),state:next,revision:revision+1}};
  }catch{return result(502,'We could not confirm the upload. Refresh your Walk before trying again.');}
- finally{try{if(!committed&&attempted){let unreferenced=false;try{const current=await first(env,'SELECT state_json FROM solborne_ai_walks WHERE registration_id=?',[registration]);unreferenced=!current||!(JSON.parse(current.state_json).fileLibrary||[]).some(file=>file.id===id&&file.key===key);}catch{console.error('WALK_FILE_COMMIT_UNCERTAIN');}if(unreferenced)await env.WALK_FILES.delete(key);}}catch{console.error('WALK_FILE_CLEANUP_FAILED');}finally{await run(env,'UPDATE solborne_ai_walks SET busy_until=0 WHERE registration_id=? AND busy_until=?',[registration,lease]);}}
+ finally{try{if(!committed&&attempted){let unreferenced=false;try{const current=await first(env,'SELECT state_json FROM solborne_ai_walks WHERE registration_id=?',[registration]);unreferenced=!current||!(JSON.parse(current.state_json).fileLibrary||[]).some(file=>file.id===id&&file.key===key);}catch{console.error('WALK_FILE_COMMIT_UNCERTAIN');}if(unreferenced)await storage.delete(key);}}catch{console.error('WALK_FILE_CLEANUP_FAILED');}finally{await run(env,'UPDATE solborne_ai_walks SET busy_until=0 WHERE registration_id=? AND busy_until=?',[registration,lease]);}}
 }
 export async function downloadWalkFile(env,registration,id){
  if(!uuid.test(id))return new Response(null,{status:404});const row=await first(env,'SELECT state_json FROM solborne_ai_walks WHERE registration_id=?',[registration]);const file=row&&(JSON.parse(row.state_json).fileLibrary||[]).find(file=>file.id===id&&file.key===registration+'/'+id);if(!file)return new Response(null,{status:404,headers:{'Cache-Control':'no-store, private'}});
- if(!env.WALK_FILES?.get)return new Response(null,{status:503,headers:{'Cache-Control':'no-store, private'}});const object=await env.WALK_FILES.get(file.key);if(!object)return new Response(null,{status:404,headers:{'Cache-Control':'no-store, private'}});
+ const storage=storageFor(env);if(!storage)return new Response(null,{status:503,headers:{'Cache-Control':'no-store, private'}});const object=await storage.get(file.key);if(!object)return new Response(null,{status:404,headers:{'Cache-Control':'no-store, private'}});
  const fallback=file.name.replace(/[^a-zA-Z0-9._ -]/g,'_');return new Response(object.body,{headers:{'Content-Type':file.type,'Content-Length':String(file.size),'Content-Disposition':`attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(file.name)}`,'Cache-Control':'no-store, private','Pragma':'no-cache','Vary':'Cookie','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox",'Referrer-Policy':'no-referrer'}});
 }
 
@@ -68,10 +70,11 @@ export async function resetWalkWithFiles(env,registration,now){
  const row=await first(env,'SELECT * FROM solborne_ai_walks WHERE registration_id=?',[registration]);if(!row)return {status:200,body:{ok:true,deleted:true,filesDeleted:true}};
  if(row.busy_until>now)return result(409,'Wait for the current operation before deleting this conversation.');
  const state=JSON.parse(row.state_json),keys=[...new Set((state.fileLibrary||[]).filter(file=>uuid.test(file.id||'')&&file.key===registration+'/'+file.id).map(file=>file.key))].slice(0,MAX_PROJECT_FILES);
- if(keys.length&&!env.WALK_FILES?.delete)return result(503,'Files could not be removed yet. Your saved Walk has not been reset. Try again shortly.');
+ const storage=storageFor(env);
+ if(keys.length&&!storage)return result(503,'Files could not be removed yet. Your saved Walk has not been reset. Try again shortly.');
  const lease=now+120000,claim=await run(env,'UPDATE solborne_ai_walks SET busy_until=? WHERE registration_id=? AND revision=? AND busy_until<=?',[lease,registration,row.revision,now]);if(!(claim.meta?.changes>=1))return result(409,'Your Walk changed. Refresh before deleting.');
  try{
-  if(keys.length)await env.WALK_FILES.delete(keys);
+  if(keys.length)await storage.delete(keys);
   const deleted=await run(env,'DELETE FROM solborne_ai_walks WHERE registration_id=? AND revision=? AND busy_until=?',[registration,row.revision,lease]);
   if(!(deleted.meta?.changes>=1))return result(409,'Some files may have been removed, but your Walk changed before reset. Refresh and retry.');
   return {status:200,body:{ok:true,deleted:true,filesDeleted:true}};

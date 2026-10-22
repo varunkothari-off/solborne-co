@@ -1,0 +1,60 @@
+{
+  "feature": "004-supabase-walk-storage",
+  "spec": "specs/004-supabase-walk-storage/spec.md",
+  "plan": "specs/004-supabase-walk-storage/plan.md",
+  "tasks": "specs/004-supabase-walk-storage/tasks.md",
+  "acceptance": [
+    {
+      "id": "AC-01",
+      "tests": [
+        "cloudflare-site/test/walk-storage.test.mjs",
+        "cloudflare-site/test/solborne-files-function.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "tests": [
+        "cloudflare-site/test/walk-files.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "tests": [
+        "specs/004-supabase-walk-storage/manual-checks.md"
+      ],
+      "status": "pending_source_files"
+    },
+    {
+      "id": "AC-04",
+      "tests": [
+        "specs/004-supabase-walk-storage/manual-checks.md"
+      ],
+      "status": "partial_research_only"
+    }
+  ],
+  "tdd": {
+    "red": {
+      "commit": "7813894",
+      "command": "cd cloudflare-site; node --test test/walk-storage.test.mjs",
+      "result": "failed",
+      "reason": "Live upload reproduced a workerd transport incompatibility; new regression failed on Unsupported redirect mode before network. Preserved private supabase-redirect-red.log. Previous broader red-to-green was observed by agent tool output only."
+    },
+    "green": {
+      "command": "npm test; npm run build",
+      "result": "passed"
+    }
+  },
+  "review": {
+    "status": "passed",
+    "report": "engineering/review-supabase-walk-storage.md"
+  },
+  "reuse": {
+    "manifest": "engineering/reuse-registry.json"
+  },
+  "limitations": [
+    "312 platform tests and CI passed. Production Worker ad1627bd-434d-4ed4-bcd9-37a0fc101b9d from436dcfa. Actual synthetic upload reached private Supabase Storage;46byte size/SHA256 matched; metadata and pending answer file reference reached presales. Authenticated browser download blocked by client, not verified successful.",
+    "Grammable email attachments not yet downloaded/imported; manual AC03 pending.",
+    "Research complete; asset-driven preview not built. AC04 partial.",
+    "Red-to-green observed by implementation agent; no preserved committed failing test snapshot claimed."
+  ]
+}
