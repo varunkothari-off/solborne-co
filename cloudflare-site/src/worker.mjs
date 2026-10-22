@@ -1,3 +1,4 @@
+import {uploadWalkFile,downloadWalkFile,resolveAnswerFiles,resetWalkWithFiles} from './walk-files.mjs';
 import {createLiveToken} from './walk-live-token.mjs';
 import {saveDesignPreferences,saveAnswerSketch,validateSketch} from './walk-design.mjs';
 import {publicMetrics} from './public-metrics.mjs';
@@ -139,6 +140,15 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     const authResponse=await authRoute(request,env,now,{fetcher:authFetch});if(authResponse)return authResponse;
     if(['GET','HEAD'].includes(request.method)&&['/index.html','/improve.html'].includes(path))return new Response(null,{status:301,headers:{...safeHeaders,Location:(path==='/index.html'?'/':'/websites.html')+url.search,'Cache-Control':'no-cache'}});
     if(path==='/api/ai-walk/status'&&request.method==='GET')return json({ok:true,enabled:providerReady(env)});
+    if(path==='/api/ai-walk/files'||path.startsWith('/api/ai-walk/files/')){
+      if(!await intakeReady(env))return error('The Walk is temporarily unavailable.',503,'registration_unavailable');
+      const access=await accessFor(request,env,now,authFetch);if(!access)return error('Sign in and choose your business first.',403,'registration_required');
+      if(request.method==='GET'&&path.startsWith('/api/ai-walk/files/'))return await downloadWalkFile(env,access.registration_id,path.slice('/api/ai-walk/files/'.length));
+      if(request.method!=='POST'||path!=='/api/ai-walk/files')return error('Use the correct action.',405,'method_not_allowed');
+      if(!validOrigin(request,env))return error('Open the Walk directly and try again.',403,'origin_required');
+      if(!await validSession(request,env,now,request.headers.get('X-CSRF-Token')))return error('Refresh your form connection before continuing.',403,'session_expired');
+      const result=await uploadWalkFile(request,env,access.registration_id,now);return json(result.body,result.status);
+    }
     if(['/api/ai-walk','/api/ai-walk/design','/api/ai-walk/sketch','/api/ai-walk/review','/api/ai-walk/preview','/api/ai-walk/complete','/api/ai-walk/submit','/api/ai-walk/transcribe','/api/ai-walk/live-token'].includes(path)&&['GET','POST','DELETE'].includes(request.method)){
       if(!await intakeReady(env))return error('The Walk is temporarily unavailable.',503,'registration_unavailable');
       const access=await accessFor(request,env,now,authFetch);if(!access)return error('Save your basic details first.',403,'registration_required');
@@ -147,12 +157,15 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
         const {row,state}=await loadDraft(env,access.registration_id);
         if(path==='/api/ai-walk/preview'){if(!state.review)return error('Run the reviews before opening a draft.',422,'review_required');return json({ok:true,html:renderAIPortfolio(state,templateCSS(state)),template:state.template});}
         if(path!=='/api/ai-walk')return error('Use the correct action.',405,'method_not_allowed');
-        return json({ok:true,enabled:providerReady(env),state,revision:row?.revision||0,...(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true'?{voiceMode:'live'}:{})});
+        return json({ok:true,enabled:providerReady(env),uploadsEnabled:!!env.WALK_FILES,state,revision:row?.revision||0,...(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true'?{voiceMode:'live'}:{})});
       }
       if(!validOrigin(request,env))return error('Open the Walk directly and try again.',403,'origin_required');
       const input=await readJson(request,path==='/api/ai-walk/transcribe'?MAX_AUDIO_BODY:path==='/api/ai-walk'?262144:['/api/ai-walk/design','/api/ai-walk/sketch'].includes(path)?131072:8192);if(!await validSession(request,env,now,input?.csrf))return error('Refresh your form connection before continuing.',403,'session_expired');
       if(['/api/ai-walk','/api/ai-walk/sketch'].includes(path)&&request.method==='POST'){
         try{validateSketch(input.sketch);}catch{return error('Use a smaller sketch with valid drawing points.',422,'invalid_sketch');}
+      }
+      if(path==='/api/ai-walk'&&request.method==='POST'){
+        const {state}=await loadDraft(env,access.registration_id);try{resolveAnswerFiles(state,input.files);}catch{return error('Choose files uploaded to this business, up to five per answer.',422,'invalid_files');}
       }
       if(path==='/api/ai-walk/sketch'){
         if(request.method!=='POST')return error('Use the correct action.',405,'method_not_allowed');
@@ -182,7 +195,7 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
         try{const result=await transcribeAudio(env,input,{fetcher:modelFetch,signal:request.signal});return json({ok:true,...result});}
         catch(e){return error(e.message.startsWith('No clear speech')?e.message:'We could not transcribe that recording. Try again or type your answer.',502,'transcription_unavailable');}
       }
-      if(request.method==='DELETE'){if(path!=='/api/ai-walk')return error('Use the correct action.',405,'method_not_allowed');const {row}=await loadDraft(env,access.registration_id);if(row?.busy_until>now)return error('Wait for the current operation before deleting this conversation.',409,'busy');await run(env,'DELETE FROM solborne_ai_walks WHERE registration_id=?',[access.registration_id]);return json({ok:true,deleted:true});}
+      if(request.method==='DELETE'){if(path!=='/api/ai-walk')return error('Use the correct action.',405,'method_not_allowed');const result=await resetWalkWithFiles(env,access.registration_id,now);return json(result.body,result.status);}
       if(path==='/api/ai-walk/submit'){const result=await submitBrief(env,access.registration_id,input,now);return json(result.body,result.status);}
       if(!await rateLimit(env,'ai-walk:'+access.registration_id,now,900000,20))return error('Too many answers at once. Please continue shortly.',429,'rate_limited');
       if(path==='/api/ai-walk/review'){const result=await reviewDraft(env,access.registration_id,input,now,{fetcher:modelFetch});return json(result.body,result.status);}
