@@ -36,3 +36,8 @@ test('pending retry restoration replaces edited attachments in the authoritative
 test('a reply does not pull the reader down after they scroll up, including queued animation frames',()=>{
  const f=fixture(),messages=f.get('ai-messages');messages.scrollHeight=1000;messages.clientHeight=200;messages.scrollTop=800;messages.fire('scroll');f.get('ai-answer-form').fire('submit');f.mutate();messages.scrollTop=100;messages.fire('scroll');f.paint();assert.equal(messages.scrollTop,100);messages.scrollHeight=1200;f.mutate();f.paint();assert.equal(messages.scrollTop,100);messages.scrollTop=1000;messages.fire('scroll');messages.scrollHeight=1400;f.mutate();f.paint();assert.equal(messages.scrollTop,1400);
 });
+
+
+test('unavailable private storage disables uploads while leaving plus and sketch usable',async()=>{
+ const f=fixture();f.context.uploadsAllowed=false;f.widget.update();assert.equal(f.get('walk-add').disabled,false);assert.equal(f.get('answer-sketch-open').disabled,false);for(const id of ['walk-upload-photo','walk-upload-file','walk-photo-input','walk-file-input']){assert.equal(f.get(id).disabled,true);assert.equal(f.get(id).attrs.title,'File uploads are being connected.');}f.get('walk-add').click();assert.equal(f.get('walk-attachment-menu').hidden,false);f.get('walk-upload-file').click();assert.equal(f.get('walk-file-input').clicks,0);f.get('walk-file-input').files=[{name:'blocked.pdf',size:5,type:'application/pdf'}];await f.get('walk-file-input').fire('change');assert.equal(f.requests.length,0);f.context.uploadsAllowed=true;f.widget.update();assert.equal(f.get('walk-upload-file').disabled,false);assert.equal(f.get('walk-upload-file').attrs.title,'');
+});

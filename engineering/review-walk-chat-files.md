@@ -15,3 +15,7 @@ Reviewer: separate bounded security/review agent; parent integrated and rendered
 Independent backend/sketch run30passed. Frontend/provider run24passed before the final page order regression; coordinator fullsuite298passed after corrections. Actual file chooser, upload/send/reload/download and phone-width rendered evidence are coordinator checks. No production/customer-data mutations, malware certification, actual phone test or paid-model inference claimed.
 
 Private downloads retain existing project ownership and no-store/nosniff/sandbox headers. Uploaded names render as text, allowlisted authenticated download paths only. Raw bytes/storage keys never enter provider payloads. Existing microphone and manual-review handoff remain. Public source contains synthetic fixtures and no customer attachments.
+
+## Storage readiness review
+
+Cloudflare reports R2 not enabled. Independent reviewer verified41tests for final readiness guard: API derives upload readiness from binding; frontend defaults false, disables file/photo controls and handlers only, preserves chat/sketch. Coordinator fullsuite300passed. Live uploads remain unavailable until owner activates R2; UI-only deployment omits the absent bucket binding.

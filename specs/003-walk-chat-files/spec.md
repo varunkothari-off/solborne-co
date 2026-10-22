@@ -11,3 +11,5 @@ Owner request,22October2026: replace raw variable names under Still to explore; 
 Initial file scope: JPEG,PNG,WebP,PDF,UTF-8 text and opaque DOCX/XLSX/PPTX downloads. Five MiB per file, twenty MiB/twenty files per project, five attachments per answer. SVG,HTML,executables,macro-enabled office files and other archives fail closed. OOXML ZIP signatures are checked; contents are not extracted. File validation is not malware certification. No automatic document extraction, OCR or visual interpretation in this release.
 
 Acceptance evidence uses synthetic fixtures. Inspect only the newly reported entry/email for diagnosis; do not edit that submitted brief or send a reply without authorisation. Inspect a reviewable preview before promoting the owner-requested refinement; deploy only after checks pass and verify the actual destination.
+
+Unavailable storage: API reports upload readiness. Without a configured private bucket, only photo/file actions are disabled; chat and sketches stay usable. Never advertise unavailable uploads as live.
