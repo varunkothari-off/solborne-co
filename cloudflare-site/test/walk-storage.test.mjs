@@ -46,3 +46,15 @@ test('provider and Edge function round trip private bytes, metadata, duplicates 
  await assert.rejects(()=>provider.put(key,new TextEncoder().encode('different'),{httpMetadata:{contentType:'application/pdf'}}));
  await provider.delete([key]);assert.equal(await provider.get(key),null);assert.equal(objects.size,0);
 });
+
+test('Worker-compatible private transport rejects redirects without forwarding credentials',async()=>{
+ let calls=0;
+ const provider=storageFor(env,{fetcher:async(url,init)=>{
+  calls++;
+  if(!['manual','follow'].includes(init.redirect))throw TypeError('Unsupported redirect mode in workerd');
+  assert.equal(init.redirect,'manual','private credential must never follow redirects');
+  return new Response(null,{status:302,headers:{Location:'https://other.invalid'}});
+ }});
+ await assert.rejects(()=>provider.get(key),/Private file storage unavailable/);
+ assert.equal(calls,1,'no redirected second request');
+});
