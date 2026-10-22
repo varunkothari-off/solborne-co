@@ -52,7 +52,7 @@
     "manifest": "engineering/reuse-registry.json"
   },
   "limitations": [
-    "312 platform tests passed. First live upload caught unsupported redirect:error; corrected to manual with redirect rejection. Authenticated live retest pending.",
+    "312 platform tests and CI passed. Production Worker ad1627bd-434d-4ed4-bcd9-37a0fc101b9d from436dcfa. Actual synthetic upload reached private Supabase Storage;46byte size/SHA256 matched; metadata and pending answer file reference reached presales. Authenticated browser download blocked by client, not verified successful.",
     "Grammable email attachments not yet downloaded/imported; manual AC03 pending.",
     "Research complete; asset-driven preview not built. AC04 partial.",
     "Red-to-green observed by implementation agent; no preserved committed failing test snapshot claimed."

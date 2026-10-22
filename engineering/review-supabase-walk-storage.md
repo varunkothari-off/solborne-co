@@ -10,3 +10,5 @@ Pending: authenticated hosted upload/download, actual emailed Grammable byte imp
 
 
 Live runtime follow-up: workerd rejected redirect:error before network. Regression commit7813894 fails as intended; fix uses manual and existing non-ok rejection, preventing credential forwarding to redirects. New total312 tests. Hosted retest required.
+
+Final hosted receipt: ad1627bd-434d-4ed4-bcd9-37a0fc101b9d from436dcfa. Private upload succeeded, size/SHA256 matched and metadata reached presales. Anonymous direct routes denied. Browser blocked authenticated download; no successful download claim. AI retry state preserved answer and file reference. Grammable actualbyte import remains blocked on native email downloads.
