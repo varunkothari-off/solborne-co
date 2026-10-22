@@ -92,3 +92,5 @@ test('unavailable commit reconciliation preserves private bytes rather than risk
 test('global authenticated upload ceiling rejects before consuming the request stream',async t=>{
  const f=await fixture(t),window=Math.floor(now/86400000);f.db.sql.prepare('INSERT INTO solborne_rate_limits(key,count,expires_at) VALUES(?,?,?)').run('walk-upload-global:'+window,1000,now+86400000);let pulled=false;const body=new ReadableStream({pull(controller){pulled=true;controller.enqueue(pdf);controller.close();}},{highWaterMark:0});const r=await f.call('/api/ai-walk/files',{method:'POST',headers:{Origin:origin,'Content-Type':'application/pdf','X-File-Name':'brief.pdf','X-CSRF-Token':f.form,'X-Walk-Revision':'0'},body,duplex:'half'});assert.equal(r.status,429);assert.equal(pulled,false);assert.equal(f.objects.size,0);
 });
+
+test('Walk reports upload readiness honestly while conversation remains available',async t=>{const f=await fixture(t);let read=await(await f.call('/api/ai-walk')).json();assert.equal(read.uploadsEnabled,true);delete f.env.WALK_FILES;read=await(await f.call('/api/ai-walk')).json();assert.equal(read.uploadsEnabled,false);assert.equal(read.enabled,true);});
