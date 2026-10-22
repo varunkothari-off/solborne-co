@@ -10,6 +10,11 @@ async function page({registered=false,enabled=false,ready=false,failAnswers=fals
  vm.runInNewContext((withSketch?readFileSync('public/answer-sketch.js','utf8')+'\n':'')+source,{Intl,console,Event,ResizeObserver:class{observe(){}disconnect(){}},localStorage:{getItem:k=>stored[k]||null,setItem:(k,v)=>stored[k]=v},document:{getElementById:id=>nodes.get(id)||null,createElement:node},window:{addEventListener(){},SignaturePad:class{constructor(){this.groups=[];}on(){}off(){}clear(){this.groups=[];}addEventListener(){}toData(){return this.groups;}fromData(value){this.groups=value;}},SolborneLiveVoice:liveVoice?{create:()=>liveVoice}:undefined,solborneSession:async()=>({authenticated:registered,registered,activeRegistration:registration,csrf:'csrf'})},matchMedia:()=>({matches:true}),fetch:async(url,options)=>{requests.push({url,options});if(failAnswers&&url==='/api/ai-walk'&&options?.method==='POST')return Response.json({ok:false,error:'Your answer is saved for retry.'},{status:502});return Response.json({ok:true,csrf:'form-csrf',enabled,voiceMode:liveVoice?'live':'batch',state:url.endsWith('/submit')?{...state,submission:{id:'WB-test',submittedAt:1,dueAt:86400001}}:state,revision:1});}});
  await new Promise(resolve=>setImmediate(resolve));return {nodes,html,requests,stored};
 }
+
+test('missing-field readout translates dotted and legacy keys without exposing implementation names',async()=>{
+ const p=await page({registered:true,enabled:true,stateOverride:{missing:['facts.legalName','businessBrief.primaryPain','business brief: freeScope','type.ParticularName']}});
+ assert.deepEqual(p.nodes.get('ai-missing').children.map(x=>x.textContent),['Legal operator','What matters most','Your first website','A detail to confirm']);
+});
 test('actual conversation page boots signed out, offers sign-in and cannot send',async()=>{
  const p=await page();assert.match(p.nodes.get('ai-availability').textContent,/Sign in/);assert.equal(p.nodes.get('ai-send').disabled,true);assert.equal(p.nodes.get('ai-submit-brief').disabled,true);assert.equal(p.nodes.get('ai-register').hidden,false);assert(!p.html.includes('ai-preview-frame'));assert.match(p.html,/Within 24 hours/);
 });
