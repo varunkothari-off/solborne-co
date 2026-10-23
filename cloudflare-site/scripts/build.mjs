@@ -1,3 +1,5 @@
+import {assertHomepages} from './home-contract.mjs';
+assertHomepages();
 import { readdir,readFile,writeFile,mkdir,rm,copyFile } from 'node:fs/promises';
 import { join,relative } from 'node:path';
 import { createHash } from 'node:crypto';

@@ -1,0 +1,58 @@
+{
+  "feature": "005-homepage-restoration",
+  "spec": "specs/005-homepage-restoration/spec.md",
+  "plan": "specs/005-homepage-restoration/plan.md",
+  "tasks": "specs/005-homepage-restoration/tasks.md",
+  "acceptance": [
+    {
+      "id": "AC-01",
+      "tests": [
+        "cloudflare-site/test/homepage-contract.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-02",
+      "tests": [
+        "cloudflare-site/test/homepage-contract.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-03",
+      "tests": [
+        "cloudflare-site/test/home-process.test.mjs"
+      ]
+    },
+    {
+      "id": "AC-04",
+      "tests": [
+        "cloudflare-site/test/homepage-contract.test.mjs",
+        "cloudflare-site/test/projects.test.mjs",
+        "cloudflare-site/test/walk-storage.test.mjs"
+      ]
+    }
+  ],
+  "tdd": {
+    "red": {
+      "commit": "1bd6456",
+      "command": "cd cloudflare-site; node --test test/homepage-contract.test.mjs",
+      "result": "failed",
+      "reason": "Release contract failed on missing compact canvas, unified process, visual examples and refinement assets in the existing production homepage."
+    },
+    "green": {
+      "command": "cd cloudflare-site; node --test test/homepage-contract.test.mjs test/home-process.test.mjs; npm test; npm run build",
+      "result": "passed"
+    }
+  },
+  "review": {
+    "status": "passed",
+    "report": "engineering/review-homepage-restoration.md"
+  },
+  "reuse": {
+    "manifest": "specs/005-homepage-restoration/reuse.json"
+  },
+  "limitations": [
+    "Physical phone hardware was not tested; 390px desktop emulation was checked.",
+    "Avasa remains a private preview destination; no passcodes published.",
+    "Build and CI protect the expected structure; they do not replace rendered review or enforce GitHub permissions."
+  ]
+}

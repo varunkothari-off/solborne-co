@@ -1,0 +1,3 @@
+# Plan
+
+Port approved sections and assets from 3795f2b into current baseline 8b9cb77; do not cherry-pick or roll back platform code. Add the existing reviewed Avasa screenshot as a second case. Apply the same structure to the retained motion variant so re-promotion cannot revive the old layout. Add a reusable build-time homepage contract plus positive/negative regression fixtures, and restore animation tests. Run full platform tests, independent review, browser desktop/narrow/reduced-motion checks, commit and push, deploy the current Worker with existing settings and inspect production. Roll back to the preceding verified Worker version if homepage, sign-in or Walk smoke checks regress. No schema or credentials changes.

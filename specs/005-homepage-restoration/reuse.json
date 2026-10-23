@@ -1,0 +1,13 @@
+{
+  "components": [
+    {
+      "name": "Approved Solborne homepage refinement",
+      "source": "https://github.com/varunkothari-off/solborne-co/commit/3795f2b7647bd4a170e0662e8c913b36402e9ff4",
+      "license": "Owner-authored Solborne code reused within the same website",
+      "usage": "Compact canvas, KFS screenshot and controlled process animation",
+      "attribution": "No new third-party code imported",
+      "assets": "Existing approved KFS screenshot and existing Avasa email showcase; no private credentials or source documents",
+      "version": "3795f2b7647bd4a170e0662e8c913b36402e9ff4"
+    }
+  ]
+}
