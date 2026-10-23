@@ -7,7 +7,7 @@ const accountRecoveryReady=typeof window!=='undefined'&&typeof window.solborneSe
       if(session?.enabled){const link=$('versions-register');link.href=session.authenticated?'/canvas.html':'/signin.html';link.textContent=session.authenticated?'Choose your saved business brief':'Sign in to reopen your saved brief';}
     }).catch(()=>{ /* Keep the existing recovery available if account status cannot be checked. */ })
   : Promise.resolve();
-function recoveryCopy(legacy){return accountRecovery?.enabled?'Sign in with the same Google account, then choose your saved business brief from Your canvas. Keep any files already downloaded.':legacy;}
+function recoveryCopy(legacy){return accountRecovery?.enabled?'Sign in with the same account, then choose your saved business brief from Your projects. Keep any files already downloaded.':legacy;}
 
 const form=$('versions-form'),fields=$('versions-fields'),select=$('versions-select'),approval=$('versions-approved');
 const completionPattern=/^SW-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -209,12 +209,12 @@ function showSaved(input){
   if(released)links('versions-saved-html','versions-saved-readme',data.completion);
   $('versions-receipt-title').textContent=released?`Version ${data.version} files are available.`:`Version ${data.version} brief is saved.`;$('versions-receipt-reference').textContent='Saved request reference: '+data.completion;
   $('versions-receipt-status').textContent=deliveryLabel(data)+'. '+reviewLabel(data)+'.';
-  $('versions-receipt-note').textContent=released?'Download both released files and open the HTML locally. Any earlier released files remain separate.':'Your approved revision brief is recorded for Solborne processing and review. Its files become available after release. Any earlier released files remain separate; view this request to check its status.';
+  $('versions-receipt-note').textContent=released?'Download both released files and open the HTML locally. Any earlier released files remain separate.':'Your approved revision brief is recorded for our team’s review. Its files become available after release. Any earlier released files remain separate; view this request to check its status.';
   $('versions-receipt').hidden=false;
   say(released?'Your revision files are available.':'Your revision brief is saved and pending Solborne processing. View this request to check its status.');focus($('versions-receipt'),'start');
 }
 async function sendAttempt(attempt){
-  if(mode==='saving')return;const resolving=mode==='pending';pendingAttempt=attempt;setMode('saving');say('Saving the approved public brief for Solborne processing and review.');
+  if(mode==='saving')return;const resolving=mode==='pending';pendingAttempt=attempt;setMode('saving');say('Sending your approved changes for our team’s review…');
   try{
     const response=await fetch('/api/walk/revisions',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(attempt)}),data=await response.json();
     if(response.ok&&data.ok){showSaved(data);return;}
