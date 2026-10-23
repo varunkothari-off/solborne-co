@@ -1,0 +1,3 @@
+# Plan
+
+Read-only independent audit covers marketing, account, registration, Walk and policy pages. Apply bounded customer-language edits rather than rewriting legal declarations or model instructions. Reuse the existing gallery on Websites, reduce metrics prominence with CSS, and keep one visible introduction progress rail. Preserve DOM identifiers and all form/security code. Add regression checks for website CTA intent and upload-policy consistency, and extend sign-in text adaptation only if needed. Verify full tests, source CI and browser layouts, then integrate into the approved baseline and publish under the continuing site-finalisation instruction. Keep rollback to fd6729a6-8570-4348-838c-8e9b172de746. No schema, consent grants, new accounts or paid services.

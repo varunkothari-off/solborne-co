@@ -1,0 +1,18 @@
+{
+  "feature":"006-customer-journey",
+  "spec":"specs/006-customer-journey/spec.md",
+  "plan":"specs/006-customer-journey/plan.md",
+  "tasks":"specs/006-customer-journey/tasks.md",
+  "acceptance":[
+    {"id":"AC-01","tests":["cloudflare-site/test/customer-journey-copy.test.mjs","cloudflare-site/test/homepage-contract.test.mjs"]},
+    {"id":"AC-02","tests":["cloudflare-site/test/customer-journey-copy.test.mjs","cloudflare-site/test/public-intake.test.mjs"]},
+    {"id":"AC-03","tests":["cloudflare-site/test/customer-journey-copy.test.mjs","cloudflare-site/test/walk-storage.test.mjs"]}
+  ],
+  "tdd":{
+    "red":{"commit":"79ddd9c","command":"cd cloudflare-site; node --test test/customer-journey-copy.test.mjs","result":"failed","reason":"All three new cases failed: website-intent CTA sent visitors to canvas, internal V1/processing copy remained, and privacy denied the existing upload feature."},
+    "green":{"command":"cd cloudflare-site; npm run build; npm test; node scripts/audit-site-links.mjs","result":"passed"}
+  },
+  "review":{"status":"passed","report":"engineering/review-customer-journey.md"},
+  "reuse":{"manifest":"specs/005-homepage-restoration/reuse.json"},
+  "limitations":["Desktop and 390px emulation only; no physical-phone test.","No new authenticated customer submission, microphone request or file upload was made.","Policy edits fix a factual contradiction; this is not legal certification."]
+}
