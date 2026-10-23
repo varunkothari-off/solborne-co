@@ -42,5 +42,5 @@
     "Existing code coverage additions are not falsely labelled test-first feature development.",
     "Owner-approved production baseline updated 23 October 2026 after homepage restoration. Require the integration head to contain requiredBaseline and the homepage build contract before any new issue work. Existing draft PRs are not automatically merged or recreated."
   ],
-  "requiredBaseline": "b6f89e91f1c53359bd3131d56fb4e554b8a3ced0"
+  "requiredBaseline": "713f9817e74f3bdc13a518ba76cb613e66a1cb18"
 }
