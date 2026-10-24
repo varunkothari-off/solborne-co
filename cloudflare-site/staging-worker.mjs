@@ -3,7 +3,7 @@ import candidate from './dist/server/index.js';
 const stagingOrigin='https://staging.solborne.in';
 const isolated={SITE_ORIGIN:stagingOrigin,AI_WALK_ENABLED:'true',AI_WEBSITE_BUILD_ENABLED:'false',AUTH_ENABLED:'false',AUTH_GOOGLE_ENABLED:'false',AUTH_EMAIL_ENABLED:'false',SUPABASE_WALK_FILES_ENABLED:'false'};
 const headers={'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow, noarchive','X-Solborne-Environment':'staging','X-Content-Type-Options':'nosniff'};
-export const stagingPath=url=>url.pathname==='/'&&url.searchParams.get('view')!=='baseline'?'/story.html':url.pathname;
+export const stagingPath=url=>url.pathname==='/'&&url.searchParams.get('view')!=='baseline'?'/payment-scenes.html':url.pathname;
 export async function stagingFetch(request,_env,ctx){
  const url=new URL(request.url);
  if(url.origin!==stagingOrigin)return new Response('Not found',{status:404,headers});

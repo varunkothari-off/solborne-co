@@ -24,8 +24,8 @@ test('staging does not fetch live customer metrics',async()=>{
  const response=await stagingFetch(new Request('https://staging.solborne.in/api/public-metrics'),{},{});
  assert.equal(response.status,503);assert.match((await response.json()).error,/staging/i);
 });
-test('story is the staging entrance, with a baseline comparison and unchanged private routes',()=>{
- assert.equal(staging.stagingPath(new URL('https://staging.solborne.in/')),'/story.html');
+test('payment scenes are the staging entrance, with a baseline comparison and unchanged private routes',()=>{
+ assert.equal(staging.stagingPath(new URL('https://staging.solborne.in/')),'/payment-scenes.html');
  assert.equal(staging.stagingPath(new URL('https://staging.solborne.in/?view=baseline')),'/');
  assert.equal(staging.stagingPath(new URL('https://staging.solborne.in/api/ai-walk')),'/api/ai-walk');
 });

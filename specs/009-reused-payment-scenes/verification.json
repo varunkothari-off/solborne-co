@@ -1,0 +1,20 @@
+{
+ "feature":"009-reused-payment-scenes",
+ "spec":"specs/009-reused-payment-scenes/spec.md",
+ "plan":"specs/009-reused-payment-scenes/plan.md",
+ "tasks":"specs/009-reused-payment-scenes/tasks.md",
+ "acceptance":[
+  {"id":"AC-01","tests":["cloudflare-site/test/payment-scenes.test.mjs"]},
+  {"id":"AC-02","tests":["cloudflare-site/test/payment-scenes.test.mjs","specs/009-reused-payment-scenes/browser-checks.md"]},
+  {"id":"AC-03","tests":["cloudflare-site/test/payment-scenes.test.mjs","specs/009-reused-payment-scenes/browser-checks.md"]},
+  {"id":"AC-04","tests":["cloudflare-site/scripts/audit-site-links.mjs","specs/009-reused-payment-scenes/assets.md","specs/009-reused-payment-scenes/browser-checks.md"]},
+  {"id":"AC-05","tests":["cloudflare-site/test/staging-isolation.test.mjs","cloudflare-site/scripts/audit-site-links.mjs","specs/009-reused-payment-scenes/browser-checks.md"]}
+ ],
+ "tdd":{
+  "red":{"commit":"58b6b2967d040d413c6e37b6ac3d84db0a8aad7e","command":"cd cloudflare-site; node --test test/payment-scenes.test.mjs test/staging-isolation.test.mjs","result":"failed","reason":"With a no-op enhancement, scene mode was absent and stagingPath still selected story.html. Seven checks ran: four passed and three failed. Later regression failed after a realistic Swiper destroy removed params and a motion preference change dereferenced it. Base hash identifies pre-change code, not a separately committed red test snapshot; tests were run in the working tree."},
+  "green":{"command":"cd cloudflare-site; node scripts/build.mjs; node --test --experimental-test-isolation=none test/*.test.mjs qa/*.test.mjs; node scripts/audit-site-links.mjs","result":"passed"}
+ },
+ "review":{"status":"passed","report":"engineering/review-reused-scenes.md"},
+ "reuse":{"manifest":"specs/009-reused-payment-scenes/reuse.json"},
+ "limitations":["Browser viewport and synthetic touch checks are not a physical-phone test.","These are stock conceptual illustrations; the payment form and dollar amount do not depict Solborne pricing or a working checkout.","Three-scene payment prototype only; prior story and baseline remain available. Staging has disconnected live services.","No measured collection improvement, automation percentage, bad-debt accuracy or customer outcome is claimed."]
+}
