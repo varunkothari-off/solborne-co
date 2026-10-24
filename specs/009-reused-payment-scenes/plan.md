@@ -6,4 +6,4 @@ Spec: specs/009-reused-payment-scenes/spec.md. Existing vanilla stack; new pinne
 - [x] Write failing integration configuration/route checks; implement one component with unified scene layout and branded footer.
 - [x] Inspect actual browser wheel, buttons/arrows, mobile layout, short viewport and centre alignment; reduced-motion/read-all and automated missing-vendor fallback.
 - [x] Run full suite/build/link checks and independent review; resolve findings.
-- [ ] Deploy staging only and verify live version/paths/footer and production hash unchanged.
+- [x] Deploy staging only and verify live version/paths/footer. Production viewed read-only and deployment list checked; a fresh byte-hash request returned403, so no fresh hash claim.

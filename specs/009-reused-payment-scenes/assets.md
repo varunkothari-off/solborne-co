@@ -27,6 +27,7 @@ The licence grants limited, nonexclusive use and modification. Do not claim endo
 ## Modifications and checks
 
 - Only the stock accent colour `#FFC727` was replaced with Solborne gold `#b79450`. Artist geometry, skin colours, neutral colours, text and dimensions were retained. No custom animation, looping CSS, SVG animation or added drawing.
+- Final file whitespace was normalized for source control; hashes below identify the shipped files.
 - Original viewBoxes: burden/followup `0 0 500 500`; owner `0 0 750 500`. Use `object-fit: contain` and centre the image; do not stretch the wider owner illustration.
 - Parsed all three as SVG/XML; no script, event-handler attributes, foreignObject, animation elements or external references found.
 - Rendered the three local files together in headless Chrome and visually inspected the resulting screenshot. All illustrations rendered with the modified gold accent.
