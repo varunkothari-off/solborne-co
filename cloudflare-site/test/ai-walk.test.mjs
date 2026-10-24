@@ -9,6 +9,17 @@ const origin='https://solborne.in',key=()=>crypto.randomUUID().replaceAll('-',''
 const facts={businessName:'Synthetic Repair Workshop',description:'We repair household objects.',audience:'Local households',services:'Repairs\nMaintenance',location:'Example town',callToAction:'Ask about a repair',email:'public@example.test',phone:'',websiteUrl:'',industry:'Repairs',legalName:'Synthetic Operator',entityType:'Proprietorship',businessAddress:'Example business address',complaintsContact:'public@example.test',feesAndTerms:'Quoted per assignment',dataHandling:'Public contact links only',proofAndPermissions:'No client testimonials supplied',brandDirection:'Simple and practical',currentAndPlanned:'Repairs are current; booking automation is planned'};
 const businessBrief={customerJourney:'Enquiry, team review, quote and repair',primaryPain:'Slow manual enquiry handling',desiredOutcome:'Respond promptly',successMeasure:'Measure response time',humanApprovals:'Team approves quotes and release',confirmedPriority:'Owner confirmed enquiry handling',freeScope:'Public services, identity, contact and portfolio'};
 const reply={businessBrief,message:'Recorded your repair services.',question:'',facts,missing:[],ready:true,template:'editorial',stage:'review'};
+test('operations enquiry seeds project context before its first answer and rejects malformed context',async t=>{
+ const f=fixture(t);const r=await f.call('/api/registration-session'),{csrf}=await r.json(),s={csrf,cookie:r.headers.get('set-cookie').split(';')[0]};f.advance(1500);
+ const input={csrf,idempotencyKey:key(),name:'Synthetic Ops',contact:'ops@example.test',enquiryType:'workflow-pilot',permissionToRespond:true,website:'',journey:{intent:'operations',workflow:'documents'}};
+ assert.equal((await post(f,s,'/api/registrations',input)).status,201);
+ const draft=JSON.parse(f.db.sql.prepare('SELECT state_json FROM solborne_ai_walks').get().state_json);
+ assert.equal(draft.journey.intent,'operations');assert.equal(draft.journey.workflow,'documents');
+ const saved=f.db.sql.prepare('SELECT id FROM solborne_registrations').get();
+ const {journey,...recovery}=input;
+ assert.equal((await post(f,s,'/api/registrations',{...recovery,expectedReceipt:saved.id})).status,200);
+ assert.equal((await post(f,s,'/api/registrations',{...input,idempotencyKey:key(),journey:{intent:'evil'}})).status,422);
+});
 class D1{
  constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec('PRAGMA foreign_keys=ON');for(const name of readdirSync('drizzle').filter(x=>x.endsWith('.sql')).sort())this.sql.exec(readFileSync('drizzle/'+name,'utf8'));this.sql.exec('UPDATE solborne_intake_control SET enabled=1');}
  prepare(sql){const database=this.sql;const stmt=this.sql.prepare(sql);let values=[];const q={bind(...v){values=v;return q;},async first(){return stmt.get(...values)||null;},async all(){return {results:stmt.all(...values)};},async run(){const before=database.prepare('SELECT total_changes() AS n').get().n;stmt.run(...values);return {success:true,meta:{changes:database.prepare('SELECT total_changes() AS n').get().n-before}};}};return q;}

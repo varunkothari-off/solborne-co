@@ -14,6 +14,7 @@ import { transcribeAudio, validateAudio, MAX_AUDIO_BODY } from './walk-transcrip
 import { renderAIPortfolio, approvedClassicFacts } from './ai-portfolio.mjs';
 
 const CONSENT_VERSION = 'solborne-public-intake-v1';
+import {normalizeJourney} from './walk-journey.mjs';
 const TYPES = new Set(['website-pilot','workflow-pilot','general-enquiry','canvas-download']);
 const COOKIE = '__Host-solborne_form';
 const MAX_BODY = 4096;
@@ -66,9 +67,11 @@ function validate(input) {
   if(input.website !== undefined && input.website !== '')return null;
   let projectName;
   if(input.projectName!==undefined){if(typeof input.projectName!=='string')return null;projectName=input.projectName.trim().normalize('NFKC');if(projectName.length<1||projectName.length>120||/[\x00-\x1f\x7f]/.test(projectName))return null;}
-  return {name,contact,enquiryType:input.enquiryType,permissionToRespond:true,...(projectName?{projectName}:{})};
+  let journey;
+  if(input.journey!==undefined){try{journey=normalizeJourney(input.journey);}catch{return null;}}
+  return {name,contact,enquiryType:input.enquiryType,permissionToRespond:true,...(projectName?{projectName}:{}),...(journey?{journey}:{})};
 }
-function receipt(row,replayed=false,headers={}) { return json({ok:true,receipt:row.id,submittedAt:new Date(row.created_at).toISOString(),replayed,message:'Your enquiry has been saved for Solborne to review. Complete the Walk of Fame to submit your public website facts for team processing.'},replayed?200:201,headers); }
+function receipt(row,replayed=false,headers={}) { return json({ok:true,receipt:row.id,submittedAt:new Date(row.created_at).toISOString(),replayed,message:'Your enquiry has been saved for Solborne to review. Continue the Walk to confirm your brief and next step.'},replayed?200:201,headers); }
 async function createSession(request,env,now) {
   if(!trustedOrigin(env)||!await intakeReady(env))return error('Registration is temporarily unavailable.',503,'configuration_unavailable');
   if(request.headers.get('Sec-Fetch-Site')==='cross-site')return error('Open the registration page directly to continue.',403,'origin_required');
@@ -92,7 +95,10 @@ async function register(request,env,now,authFetch=fetch) {
   const session=await first(env,'SELECT created_at,expires_at FROM solborne_form_sessions WHERE token_hash=?',[await digest(input.csrf)]);
   if(!session||session.expires_at<now)return error('Your form session expired. Your entries have been kept.',403,'session_expired');
   if(now-session.created_at<1000)return error('Please review the form before submitting.',429,'too_fast',{'Retry-After':'2'});
-  const key=await digest(input.idempotencyKey),payloadHash=await digest(JSON.stringify(data));
+  // Journey is presentation/context, not proof of identity. A recovery file need not
+  // reproduce campaign parameters; replay returns the original saved project unchanged.
+  const {journey:entryJourney,...identityData}=data;
+  const key=await digest(input.idempotencyKey),payloadHash=await digest(JSON.stringify(identityData));
   const existing=await first(env,'SELECT id,payload_hash,created_at FROM solborne_registrations WHERE idempotency_key=?',[key]);
   // Recovery files restore an exact existing enquiry; they cannot create a new one.
   // expectedReceipt stays out of the normalized details and idempotency payload hash.
@@ -107,7 +113,7 @@ async function register(request,env,now,authFetch=fetch) {
     const values=[id,key,payloadHash,data.name,data.contact,data.enquiryType,1,CONSENT_VERSION,now,CONSENT_VERSION];
     const operations=[database(env).prepare(insertSQL).bind(...values)];
     if(identity){operations.push(database(env).prepare("INSERT INTO solborne_auth_registrations(user_id,registration_id,created_at) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM solborne_registrations WHERE id=?)").bind(identity.id,id,now,id),database(env).prepare("UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=? AND user_id=? AND EXISTS(SELECT 1 FROM solborne_auth_registrations WHERE user_id=? AND registration_id=?)").bind(id,identity.sessionHash,identity.id,identity.id,id));}
-    if(data.projectName)operations.push(database(env).prepare('INSERT INTO solborne_ai_walks(registration_id,state_json,created_at,updated_at) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM solborne_registrations WHERE id=?)').bind(id,JSON.stringify({messages:[],facts:{businessName:data.projectName},businessBrief:{},missing:[],ready:false,template:'editorial',stage:'business',review:null}),now,now,id));
+    if(data.projectName||data.journey)operations.push(database(env).prepare('INSERT INTO solborne_ai_walks(registration_id,state_json,created_at,updated_at) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM solborne_registrations WHERE id=?)').bind(id,JSON.stringify({messages:[],facts:data.projectName?{businessName:data.projectName}:{},businessBrief:{},...(data.journey?{journey:data.journey}:{}),missing:[],ready:false,template:'editorial',stage:'business',review:null}),now,now,id));
     const saved=(await database(env).batch(operations))[0];
     if(!(saved.meta?.changes>=1))return error('Registration is temporarily unavailable. Please try again later.',503,'registration_unavailable');
   }
@@ -214,7 +220,11 @@ export async function handleRequest(request,env,{clock=Date.now,modelFetch=fetch
     if(path.startsWith('/downloads/')&&(request.method==='GET'||request.method==='HEAD'))return await download(request,env,now,authFetch);
     if(path.startsWith('/api/'))return error('This operation is not supported.',405,'method_not_allowed');
     if(request.method!=='GET'&&request.method!=='HEAD')return error('This operation is not supported.',405,'method_not_allowed',{'Allow':'GET, HEAD'});
-    if(env.AI_WALK_ENABLED==='true'&&['/walk','/walk/','/walk.html'].includes(path))return new Response(null,{status:302,headers:{...safeHeaders,...noStore,Location:'/ai-walk.html'}});
+    if(env.AI_WALK_ENABLED==='true'&&['/walk','/walk/','/walk.html'].includes(path)){
+      const params=new URL(request.url).searchParams;
+      const journey=params.get('intent')==='operations'?'?intent=operations'+(['payments','documents','quotes'].includes(params.get('workflow'))?'&workflow='+params.get('workflow'):''):'';
+      return new Response(null,{status:302,headers:{...safeHeaders,...noStore,Location:'/ai-walk.html'+journey}});
+    }
     return await serveAsset(request,path,env);
   } catch(cause) {
     if(cause instanceof FormError)return error(cause.message,cause.status);

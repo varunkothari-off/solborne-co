@@ -11,6 +11,15 @@ async function page({registered=false,enabled=false,ready=false,failAnswers=fals
  await new Promise(resolve=>setImmediate(resolve));return {nodes,html,requests,stored,clearedFiles,forcedScrolls:()=>forcedScrolls};
 }
 
+test('operations saved journey shows job summary without a website deadline',async()=>{
+ const p=await page({registered:true,enabled:true,stateOverride:{journey:{intent:'operations',workflow:'payments'},businessBrief:{customerJourney:'Invoice to payment',humanApprovals:'Disputes need the owner'},submission:{id:'WB-test',service:'operations',status:'in_review',owner:'Solborne team',nextAction:'Review workflow scope',submittedAt:1,dueAt:null}}});
+ assert.match(p.nodes.get('summary-title').textContent,/workflow/i);
+ assert.match(p.nodes.get('ai-receipt').textContent,/WB-test/);
+ assert.doesNotMatch(p.nodes.get('ai-receipt').textContent,/Link due|1970/);
+ assert.match(p.nodes.get('ai-receipt').textContent,/Solborne team/);
+ assert.match(p.nodes.get('ai-submitted-description').textContent,/Review workflow scope/);
+});
+
 test('missing-field readout translates dotted and legacy keys without exposing implementation names',async()=>{
  const p=await page({registered:true,enabled:true,stateOverride:{missing:['facts.legalName','businessBrief.primaryPain','business brief: freeScope','type.ParticularName']}});
  assert.deepEqual(p.nodes.get('ai-missing').children.map(x=>x.textContent),['Legal operator','What matters most','Your first website','A detail to confirm']);

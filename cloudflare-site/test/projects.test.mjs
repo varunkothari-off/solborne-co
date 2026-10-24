@@ -15,6 +15,33 @@ async function fixture(t){const db=new D1();t.after(()=>db.sql.close());const op
 }
 function seedProject(f,{id,name,status={},owner=uid,at=now}){f.db.sql.prepare('INSERT INTO solborne_registrations VALUES(?,?,?,?,?,?,?,?,?)').run(id,'key-'+id,'hash-'+id,'Owner',user.email,'website-pilot',1,'solborne-public-intake-v1',at);f.db.sql.prepare('INSERT INTO solborne_auth_registrations VALUES(?,?,?)').run(owner,id,at);f.db.sql.prepare('INSERT INTO solborne_ai_walks(registration_id,state_json,created_at,updated_at) VALUES(?,?,?,?)').run(id,JSON.stringify({facts:{businessName:name,websiteUrl:'https://'+id+'.example.test'},businessBrief:{privateNotes:'PRIVATE-'+id},messages:[{role:'user',text:'SECRET-'+id}],...status}),at,at);}
 
+test('project summaries expose safe saved journey and actual allowlisted operations review status',async t=>{
+ const f=await fixture(t);const statuses=['awaiting_manual_review','in_review','awaiting_customer','proposal_ready','completed','PRIVATE_BAD_STATUS'];
+ for(const [i,status] of statuses.entries())seedProject(f,{id:'ops-'+i,name:'Operations '+i,status:{journey:{intent:'operations',workflow:'documents',private:'PRIVATE_CAMPAIGN'},submission:{status,submittedAt:now-100,owner:'PRIVATE_OWNER',nextAction:'PRIVATE_NEXT',history:['PRIVATE_HISTORY']}}});
+ const {body}=await f.session();for(const [i,status] of statuses.entries()){const item=body.registrations.find(x=>x.id==='ops-'+i);assert.deepEqual(item.journey,{intent:'operations',workflow:'documents'});assert.equal(item.projectStatus,status==='PRIVATE_BAD_STATUS'?'awaiting_manual_review':status);}
+ assert.doesNotMatch(JSON.stringify(body),/PRIVATE_|privateNotes|SECRET-|businessBrief|history/);
+});
+
+test('a legacy website release cannot label an operations review as website delivered',async t=>{
+ const f=await fixture(t);seedProject(f,{id:'ops-review',name:'Operations',status:{journey:{intent:'operations',workflow:'payments'},submission:{status:'completed',submittedAt:now-1}}});
+ seedProject(f,{id:'old-website',name:'Website'});
+ // Represent pre-existing grandfathered releases; this test is not exercising release authorisation.
+ f.db.sql.exec('DROP TRIGGER solborne_release_requires_review');
+ for(const id of ['ops-review','old-website']){
+  f.db.sql.prepare('INSERT INTO solborne_walk_completions(id,registration_id,idempotency_key,payload_hash,website_facts_json,scope_version,created_at) VALUES(?,?,?,?,?,?,?)').run('completion-'+id,id,'completion-key-'+id,'payload-'+id,'{}','scope',now);
+  f.db.sql.prepare('INSERT INTO solborne_website_releases(completion_id,released_at,release_basis) VALUES(?,?,?)').run('completion-'+id,now,'grandfathered');
+ }
+ const {body}=await f.session();assert.equal(body.registrations.find(x=>x.id==='ops-review').projectStatus,'completed');assert.equal(body.registrations.find(x=>x.id==='old-website').projectStatus,'delivered');
+});
+
+test('operations project cards show review completion and open their saved journey rather than stale campaign context',async()=>{
+ const element=tag=>({tag,children:[],events:{},classList:{add(){}},append(...items){this.children.push(...items);},setAttribute(){},addEventListener(name,fn){this.events[name]=fn;}});
+ const locations=[],calls=[],scope={document:{querySelector:()=>element('status'),querySelectorAll:()=>[],createElement:element},window:{solborneJourney:{intent:'operations',workflow:'quotes'}},URL,location:{assign:url=>locations.push(url)},fetch:async(url,options)=>{calls.push({url,options});return {ok:true};}};
+ const code=readFileSync('public/canvas.js','utf8');vm.runInNewContext(code.slice(0,code.lastIndexOf('(async()=>')),scope);
+ const card=scope.projectCard({id:'owned',projectName:'Own review',journey:{intent:'operations',workflow:'payments'},projectStatus:'completed',submittedAt:now},false).children[0];assert.equal(card.children[0].children[1].textContent,'Review completed');
+ const button=card.children.at(-1);await button.events.click();assert.equal(locations[0],'/walk.html?intent=operations&workflow=payments');assert.equal(JSON.parse(calls[0].options.body).registrationId,'owned');
+});
+
 test('same account receives two separately named projects and independent progress without draft contents',async t=>{const f=await fixture(t);seedProject(f,{id:'brand-one',name:'Brand One'});seedProject(f,{id:'brand-two',name:'Brand Two',status:{submission:{submittedAt:now-1000}},at:now+1});f.db.sql.prepare('UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=?').run('brand-two',f.hash);const {body}=await f.session();assert.equal(body.activeRegistration,'brand-two');assert.equal(body.registrations.length,2);assert.deepEqual(body.registrations.map(p=>({name:p.projectName,status:p.projectStatus})),[{name:'Brand Two',status:'awaiting_manual_review'},{name:'Brand One',status:'in_progress'}]);assert.equal(body.registrations[0].submittedAt,now-1000);assert.equal(body.registrations[1].website,'https://brand-one.example.test');assert.doesNotMatch(JSON.stringify(body),/PRIVATE-|SECRET-|state_json|access_token|businessBrief/);});
 
 test('foreign projects remain unreadable and unselectable even when active ID is tampered',async t=>{const f=await fixture(t);seedProject(f,{id:'own-project',name:'Own Project'});seedProject(f,{id:'foreign-project',name:'Foreign Project',owner:other});f.db.sql.prepare('UPDATE solborne_auth_sessions SET active_registration_id=? WHERE token_hash=?').run('foreign-project',f.hash);const identity=await authIdentity(new Request(origin,{headers:{Cookie:f.cookie}}),f.env,now,authFetch);assert.equal(identity.registration_id,null);const {response,body}=await f.session();assert.equal(body.registered,false);assert.equal(body.activeRegistration,null);assert.deepEqual(body.registrations.map(x=>x.id),['own-project']);assert.doesNotMatch(JSON.stringify(body),/Foreign Project|foreign-project/);const csrfCookie=response.headers.get('set-cookie').split(';')[0];const result=await authRoute(new Request(origin+'/api/auth/select-registration',{method:'POST',headers:{Origin:origin,Cookie:f.cookie+'; '+csrfCookie,'Content-Type':'application/json'},body:JSON.stringify({csrf:body.csrf,registrationId:'foreign-project'})}),f.env,now,{fetcher:authFetch});assert.equal(result.status,403);});
