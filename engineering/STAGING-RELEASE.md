@@ -1,5 +1,15 @@
 # Solborne staging release
 
+## Current: visual-story update
+
+24 October 2026. Version77ec39e6-e02c-4d35-9cfe-3b67da584425 at100%, product source142f6960e8610705ebd7330b10a5900e6860dda7. Seven scroll-linked story scenes at the staging root; previous homepage remains at /?view=baseline. New /walk-demo.html is an explicitly scripted interaction example; actual AI Walk has a saved-state visual map.
+
+375 platform tests, eight-feature evidence gate, GitHub source/evidence checks and20-page link audit passed. Desktop/390px, scroll-to-scene correspondence, post-review corrections, retained context, dispute pause, reduced-motion/static fallback and no overflow checked. Actual HTTPS domain verified: root/story, demo, baseline and AI Walk all200 with staging/noindex headers. Browser verified work token moves with scroll, dispute pauses routine follow-up, and actual Walk has five map decisions. Production homepage SHA256 remains57a06d0de7679f896d77b55ba9759bcec9757eea25444e5dc174d4b920cf5f25.
+
+Only staging changed. Live auth/AI/uploads/submissions remain disconnected. No customer data, production bindings, cron or external transports added. Rollback version995ede53-8e73-4f26-88d6-793f2a2465d4 remains the prior visual staging release.
+
+## Initial staging release
+
 Owner request on 24 October 2026: publish the reviewed JTBD website and Walk changes on staging.solborne.in. This is staging authorisation only; production and draft-PR merge remain unchanged.
 
 - URL: https://staging.solborne.in/
