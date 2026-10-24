@@ -33,6 +33,6 @@ The licence grants limited, nonexclusive use and modification. Do not claim endo
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `burden.svg` | 393162 | `76bae76e439d810d5d2827bfdd6a48024b8bf3f87f19966c5c6d6c25d4da1b93` |
-| `followup.svg` | 211270 | `24acce6202a9ce10282fc0beee3d86367a8b5b9960efd2ae6c0ce99eda32e645` |
-| `owner.svg` | 209430 | `8563a970b56decead8fd1a019abac811d77cf67ecc0654f27a1e09b0a10cd460` |
+| `burden.svg` | 393161 | `a43f17b51608204d31585e4b61913d03c253c960b3bb6b0beec7ac5818e6c716` |
+| `followup.svg` | 211271 | `27bf77faf474b82af8d70a3c4daf88fce56f46343162cee7a049d43ae43ae9d4` |
+| `owner.svg` | 209429 | `57c94a56d05ee2b427b619f21192074bd0923ccede47132a21d32afd30b33d19` |
