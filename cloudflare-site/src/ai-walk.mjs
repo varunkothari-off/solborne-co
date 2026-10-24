@@ -5,12 +5,13 @@ import {aiFields} from './ai-walk-fields.mjs';
 export {aiFields} from './ai-walk-fields.mjs';
 import {generateGroundedArgonReply} from './argon-walk.mjs';
 import {WALK_META_PROMPT,WALK_PROMPT_VERSION,businessBriefFields} from './walk-meta-prompt.mjs';
+import {normalizeJourney,resolveJourney,requirementsForJourney,journeyPrompt} from './walk-journey.mjs';
 
 export const initialState=()=>({messages:[],facts:{},businessBrief:{},promptVersion:WALK_PROMPT_VERSION,missing:[],ready:false,template:'editorial',stage:'business',review:null});
 const stages=new Set(['business','audience','offer','operations','priority','brand','proof','disclosures','review']);
 const templates=new Set(['editorial','story']);
 const prompt=WALK_META_PROMPT;
-export function validateReply(value){
+export function validateReply(value,journey){
   if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Invalid model reply');
   const text=(v,max)=>typeof v==='string'&&v.length<=max&&!/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(v);
   if(!text(value.message,1000)||!text(value.question,700)||typeof value.ready!=='boolean'||!stages.has(value.stage)||!templates.has(value.template)||!Array.isArray(value.missing)||value.missing.length>20||value.missing.some(x=>!text(x,200)))throw new Error('Invalid model reply');
@@ -19,10 +20,11 @@ export function validateReply(value){
   const businessBrief={};
   if(!value.businessBrief||typeof value.businessBrief!=='object'||Array.isArray(value.businessBrief)||Object.keys(value.businessBrief).some(k=>!Object.hasOwn(businessBriefFields,k)))throw new Error('Invalid private business brief');
   for(const [k,v] of Object.entries(value.businessBrief)){if(!text(v,businessBriefFields[k]))throw new Error('Invalid private business brief');businessBrief[k]=v.trim();}
-  const required=['businessName','description','audience','services','callToAction','industry','legalName','entityType','businessAddress'];
-  const missing=[...new Set([...value.missing,...required.filter(k=>!facts[k])])];
-  if(!facts.email&&!facts.phone&&!facts.websiteUrl)missing.push('public contact');
-  for(const k of ['customerJourney','primaryPain','desiredOutcome','successMeasure','humanApprovals','confirmedPriority','freeScope'])if(!businessBrief[k])missing.push('business brief: '+k);
+  const requirements=requirementsForJourney(journey),required=requirements.facts;
+  const usable=v=>!!v&&(requirements.contact||!/^(unknown|not provided|tbd|pending|deferred)/i.test(v));
+  const missing=[...new Set([...value.missing,...required.filter(k=>!usable(facts[k]))])];
+  if(requirements.contact&&!facts.email&&!facts.phone&&!facts.websiteUrl)missing.push('public contact');
+  for(const k of requirements.brief)if(!usable(businessBrief[k]))missing.push('business brief: '+k);
   return {...value,facts,businessBrief,promptVersion:WALK_PROMPT_VERSION,missing,ready:value.ready&&missing.length===0};
 }
 export function providerReady(env){return env.AI_WALK_ENABLED==='true'&&typeof env.GEMINI_API_KEY==='string'&&env.GEMINI_API_KEY.length>10;}
@@ -32,12 +34,12 @@ export async function generateReply(env,state,message,{fetcher=fetch}={}){
   if(model==='gemini-4-argon')return generateGroundedArgonReply(env,state,message,{fetcher});
   const transcript=state.messages.slice(-12).map(x=>`${x.role}: ${x.text}`).join('\n');
   const properties=Object.fromEntries(Object.keys(aiFields).map(k=>[k,{type:'string'}]));
-  const payload={systemInstruction:{parts:[{text:prompt}]},contents:[{role:'user',parts:[{text:JSON.stringify({designPreferences:designText(state),sketchAttachments:answerSketchMetadata(state),fileAttachments:answerFileMetadata(state),facts:state.facts,businessBrief:state.businessBrief||{},template:state.template,promptVersion:WALK_PROMPT_VERSION,transcript,review:state.review,answer:message})}]}],generationConfig:{temperature:0.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{message:{type:'string'},question:{type:'string'},facts:{type:'object',properties,required:Object.keys(aiFields)},businessBrief:{type:'object',properties:Object.fromEntries(Object.keys(businessBriefFields).map(k=>[k,{type:'string'}])),required:Object.keys(businessBriefFields)},missing:{type:'array',items:{type:'string'}},ready:{type:'boolean'},template:{type:'string',enum:['editorial','story']},stage:{type:'string',enum:[...stages]}},required:['message','question','facts','businessBrief','missing','ready','template','stage']}}};
+  const payload={systemInstruction:{parts:[{text:journeyPrompt(prompt,state.journey)}]},contents:[{role:'user',parts:[{text:JSON.stringify({journey:normalizeJourney(state.journey),designPreferences:designText(state),sketchAttachments:answerSketchMetadata(state),fileAttachments:answerFileMetadata(state),facts:state.facts,businessBrief:state.businessBrief||{},template:state.template,promptVersion:WALK_PROMPT_VERSION,transcript,review:state.review,answer:message})}]}],generationConfig:{temperature:0.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:{type:'object',properties:{message:{type:'string'},question:{type:'string'},facts:{type:'object',properties,required:Object.keys(aiFields)},businessBrief:{type:'object',properties:Object.fromEntries(Object.keys(businessBriefFields).map(k=>[k,{type:'string'}])),required:Object.keys(businessBriefFields)},missing:{type:'array',items:{type:'string'}},ready:{type:'boolean'},template:{type:'string',enum:['editorial','story']},stage:{type:'string',enum:[...stages]}},required:['message','question','facts','businessBrief','missing','ready','template','stage']}}};
   const response=await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify(payload),signal:AbortSignal.timeout(45000)});
   if(!response.ok)throw new Error('Model temporarily unavailable');
   const raw=await response.text();if(raw.length>100000)throw new Error('Reply too large');
   const data=JSON.parse(raw),text=data.candidates?.[0]?.content?.parts?.filter(p=>!p.thought).map(p=>p.text||'').join('');
-  const reply=validateReply(JSON.parse(text));
+  const reply=validateReply(JSON.parse(text),state.journey);
   return {reply,usage:{input:Number(data.usageMetadata?.promptTokenCount)||0,output:Number(data.usageMetadata?.candidatesTokenCount)||0,thinking:Number(data.usageMetadata?.thoughtsTokenCount)||0}};
 }
 export async function loadDraft(env,registration){const row=await first(env,'SELECT * FROM solborne_ai_walks WHERE registration_id=?',[registration]);return row?{row,state:JSON.parse(row.state_json)}:{row:null,state:initialState()};}
@@ -80,6 +82,7 @@ export async function reviewDraft(env,registration,input,now,{fetcher=fetch}={})
   }catch{await run(env,'UPDATE solborne_ai_walks SET busy_until=0 WHERE registration_id=? AND revision=? AND busy_until=?',[registration,row.revision,now+120000]);return {status:502,body:{ok:false,error:'Research or marketing review could not be completed. No website was published. Retry or request team review.'}};}
 }
 export async function answerDraft(env,registration,input,now,{fetcher=fetch}={}){
+  let requestedJourney;try{requestedJourney=normalizeJourney(input?.journey);}catch{return {status:422,body:{ok:false,error:'Choose a valid website or operations journey.'}};}
   if(!providerReady(env))return {status:503,body:{ok:false,code:'provider_not_connected',error:'The guided AI Walk is waiting for its provider connection. Your existing Walk remains available.'}};
   if(input?.consent!==true)return {status:422,body:{ok:false,error:'Agree to AI processing of your business brief before starting.'}};
   let sketch;try{sketch=validateSketch(input.sketch);}catch{return {status:422,body:{ok:false,error:'Use a smaller sketch with valid drawing points.'}};}
@@ -103,11 +106,11 @@ export async function answerDraft(env,registration,input,now,{fetcher=fetch}={})
   const originatingQuestion=pending?.question||state.question||state.messages.filter(m=>m.role==='assistant').at(-1)?.text||'Let’s start with your story. Tell me about your business.';
   if(!pending||!ownerMessages.some(item=>item.id===turn))ownerMessages.push({id:turn,text:message});
   const pendingAnswer={id:turn,text:message,sketch,files:files.map(f=>f.id),question:originatingQuestion};
-  let callState={...state,ownerMessages,pendingAnswer};
+  let callState={...state,journey:resolveJourney(state,requestedJourney),ownerMessages,pendingAnswer};
   if(env.GEMINI_MODEL==='gemini-4-argon'){
     callState={...callState,ready:false,review:null};
     await run(env,'UPDATE solborne_ai_walks SET state_json=? WHERE registration_id=? AND revision=? AND busy_until=?',[JSON.stringify(callState),registration,input.revision,now+60000]);
-  }
+  }else if(!state.journey)await run(env,'UPDATE solborne_ai_walks SET state_json=? WHERE registration_id=? AND revision=? AND busy_until=?',[JSON.stringify({...state,journey:callState.journey}),registration,input.revision,now+60000]);
   try{
     if(!await reserveModelCalls(env,now,1)){await run(env,'UPDATE solborne_ai_walks SET busy_until=0,calls=calls-1 WHERE registration_id=? AND revision=? AND busy_until=?',[registration,input.revision,now+60000]);return dailyLimit();}
     const {reply,usage}=await generateReply(env,callState,message,{fetcher});
@@ -129,7 +132,8 @@ export async function submitBrief(env,registration,input,now){
   if(state.submission)return {status:200,body:{ok:true,state,revision:row.revision,replayed:true}};
   if(!row||!state.ready||state.pendingAnswer||row.revision!==input.revision)return {status:422,body:{ok:false,error:'Finish the conversation and check the latest summary before sending.'}};
   if(row.busy_until>now)return {status:409,body:{ok:false,error:'Wait for the current answer to finish, then send your brief.'}};
-  const submission={id:'WB-'+crypto.randomUUID(),submittedAt:now,dueAt:now+24*60*60*1000,status:'awaiting_manual_review',confirmedRevision:row.revision};
+  const service=normalizeJourney(state.journey).intent;
+  const submission={id:'WB-'+crypto.randomUUID(),submittedAt:now,dueAt:service==='operations'?null:now+24*60*60*1000,status:'awaiting_manual_review',confirmedRevision:row.revision,service,team:'Solborne',owner:'Solborne team',nextAction:service==='operations'?'Team review of your workflow brief':'Team review of your website brief',history:[{at:now,status:'awaiting_manual_review',owner:'Solborne team'}]};
   const next={...state,submission};
   const saved=await run(env,'UPDATE solborne_ai_walks SET state_json=?,revision=revision+1,updated_at=? WHERE registration_id=? AND revision=? AND busy_until<=?',[JSON.stringify(next),now,registration,row.revision,now]);
   if(!(saved.meta?.changes>=1))return {status:409,body:{ok:false,error:'Your summary changed. Refresh it before sending.'}};

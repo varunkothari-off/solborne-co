@@ -2,7 +2,7 @@
 (()=>{
  const section=document.querySelector('.process-story');if(!section)return;
  const panels=[...section.querySelectorAll('.process-panel')],buttons=[...section.querySelectorAll('[data-process-step]')],toggle=section.querySelector('.process-motion'),description=section.querySelector('.process-description'),reduce=matchMedia('(prefers-reduced-motion: reduce)');
- const captions=['First, we get to know your business.','Then, we research and design your website.','Our team reviews it. You approve it before release.'];
+ const captions=['First, we understand what brought you here.','Then, we prepare the right next step for your business.','Our team reviews it. You approve the agreed scope.'];
  let current=0,timer=null,paused=false,near=false,finished=false;
  function stop(){clearTimeout(timer);timer=null;}
  function show(index){panels.forEach((p,i)=>{p.classList.toggle('is-leaving',i===current&&i!==index);p.classList.toggle('is-current',i===index);p.inert=i!==index;p.setAttribute('aria-hidden',String(i!==index));});current=index;buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));description.textContent=captions[index];}

@@ -28,3 +28,28 @@ test('expired or malformed website intent cannot divert a later canvas visit',()
   const entry=page('/canvas.html','',new Map([['solborne.entry.v1',value]]));assert.equal(entry.solborneEntryTarget({registered:true},{consume:true}),'/canvas.html');
  }
 });
+
+test('operations campaign survives OAuth and carries only allowlisted local context',()=>{
+ const saved=new Map();page('/signin.html','?next=walk&intent=operations&workflow=payments',saved);
+ const callback=page('/canvas.html','',saved);
+ assert.equal(callback.solborneEntryTarget({registered:false},{consume:true}),'/start.html?intent=operations&workflow=payments');
+ assert.equal(page('/signin.html','?next=walk&intent=operations&workflow=quotes').solborneEntryTarget({registered:true},{consume:true}),'/walk.html?intent=operations&workflow=quotes');
+});
+test('invalid campaign parameters cannot become arbitrary destinations or workflow text',()=>{
+ const entry=page('/signin.html','?next=walk&intent=https://evil.test&workflow=secret');
+ assert.equal(entry.solborneEntryTarget({registered:true},{consume:true}),'/walk.html');
+});
+test('operations entry exposes contextual choice and continues with storage disabled',()=>{
+ const context=vm.createContext({window:{},location:{pathname:'/signin.html',search:'?next=walk&intent=operations&workflow=documents'},URLSearchParams,Date:{now:()=>1000},sessionStorage:{getItem(){throw Error('disabled')},setItem(){throw Error('disabled')},removeItem(){throw Error('disabled')}}});
+ vm.runInContext(script,context);
+ assert.equal(context.window.solborneJourney.intent,'operations');
+ assert.equal(context.window.solborneEntryTarget({registered:true}),'/walk.html?intent=operations&workflow=documents');
+});
+
+test('OAuth can recover allowlisted journey from a short-lived essential cookie if session storage is blocked',()=>{
+ let cookie='';const doc={get cookie(){return cookie;},set cookie(value){cookie=value;}};
+ const storage={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')},removeItem(){throw Error('blocked')}};
+ const run=(pathname,search)=>{const c=vm.createContext({document:doc,window:{},location:{pathname,search},URLSearchParams,Date:{now:()=>1000000},sessionStorage:storage});vm.runInContext(script,c);return c.window;};
+ run('/signin.html','?next=walk&intent=operations&workflow=quotes');
+ assert.equal(run('/canvas.html','').solborneEntryTarget({registered:false},{consume:true}),'/start.html?intent=operations&workflow=quotes');
+});
