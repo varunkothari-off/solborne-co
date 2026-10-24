@@ -1,0 +1,20 @@
+{
+ "feature":"008-visual-story",
+ "spec":"specs/008-visual-story/spec.md",
+ "plan":"specs/008-visual-story/plan.md",
+ "tasks":"specs/008-visual-story/tasks.md",
+ "acceptance":[
+  {"id":"AC-01","tests":["cloudflare-site/test/scroll-story.test.mjs","cloudflare-site/test/staging-isolation.test.mjs"]},
+  {"id":"AC-02","tests":["cloudflare-site/scripts/audit-site-links.mjs","cloudflare-site/test/scroll-story.test.mjs"]},
+  {"id":"AC-03","tests":["cloudflare-site/test/walk-demo.test.mjs"]},
+  {"id":"AC-04","tests":["cloudflare-site/test/walk-map.test.mjs","cloudflare-site/test/ai-walk-frontend.test.mjs"]},
+  {"id":"AC-05","tests":["cloudflare-site/test/staging-isolation.test.mjs","cloudflare-site/scripts/audit-site-links.mjs"]}
+ ],
+ "tdd":{
+  "red":{"commit":"0aca6d1","command":"cd cloudflare-site; node --test test/walk-demo.test.mjs test/walk-map.test.mjs test/scroll-story.test.mjs test/staging-isolation.test.mjs test/ai-walk-frontend.test.mjs","result":"failed","reason":"New acceptance tests failed before their corresponding behaviour: no inspectable demo, no saved-state map, incorrect chapter geometry, missing staging story route and actual map render hook. Later correction test failed before reopen support. Hash identifies pre-change base; new tests were run in working tree rather than a separately committed red snapshot."},
+  "green":{"command":"cd cloudflare-site; node scripts/build.mjs; node --test --experimental-test-isolation=none test/*.test.mjs qa/*.test.mjs; node scripts/audit-site-links.mjs","result":"passed"}
+ },
+ "review":{"status":"passed","report":"engineering/review-visual-story.md"},
+ "reuse":{"manifest":"specs/008-visual-story/reuse.json"},
+ "limitations":["Interactive demo is deterministic and illustrative, not a model-quality evaluation or actual submission.","Mobile emulation and desktop checked; no physical-phone test.","Staging remains isolated with live authentication, AI, uploads and submissions disconnected."]
+}

@@ -65,8 +65,8 @@ function journeyCopy(){
 }
 
 function render(){
-
  journeyCopy();
+ window.SolborneWalkMap?.render(state,activeJourney());
 
  answerSketch?.update();
 

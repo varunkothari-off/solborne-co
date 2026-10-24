@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {stagingFetch} from '../staging-worker.mjs';
+import * as staging from '../staging-worker.mjs';
+const {stagingFetch}=staging;
 test('staging configuration has its own exact host and no production data or scheduled bindings',()=>{
  const config=JSON.parse(readFileSync('wrangler.staging.jsonc','utf8'));
  assert.equal(config.name,'solborne-staging');
@@ -22,4 +23,9 @@ test('staging session reports disconnected auth even when production values are 
 test('staging does not fetch live customer metrics',async()=>{
  const response=await stagingFetch(new Request('https://staging.solborne.in/api/public-metrics'),{},{});
  assert.equal(response.status,503);assert.match((await response.json()).error,/staging/i);
+});
+test('story is the staging entrance, with a baseline comparison and unchanged private routes',()=>{
+ assert.equal(staging.stagingPath(new URL('https://staging.solborne.in/')),'/story.html');
+ assert.equal(staging.stagingPath(new URL('https://staging.solborne.in/?view=baseline')),'/');
+ assert.equal(staging.stagingPath(new URL('https://staging.solborne.in/api/ai-walk')),'/api/ai-walk');
 });
