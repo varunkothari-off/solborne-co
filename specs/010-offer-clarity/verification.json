@@ -1,0 +1,13 @@
+{
+ "feature":"010-offer-clarity","spec":"specs/010-offer-clarity/spec.md","plan":"specs/010-offer-clarity/plan.md","tasks":"specs/010-offer-clarity/tasks.md",
+ "acceptance":[
+  {"id":"AC-01","tests":["cloudflare-site/test/staging-isolation.test.mjs","specs/010-offer-clarity/browser-checks.md"]},
+  {"id":"AC-02","tests":["engineering/review-offer-clarity.md","cloudflare-site/scripts/audit-site-links.mjs"]},
+  {"id":"AC-03","tests":["engineering/review-offer-clarity.md","cloudflare-site/test/launch-seo-analytics.test.mjs"]},
+  {"id":"AC-04","tests":["specs/010-offer-clarity/browser-checks.md","cloudflare-site/scripts/audit-site-links.mjs"]},
+  {"id":"AC-05","tests":["cloudflare-site/test/staging-preview.test.mjs","cloudflare-site/test/staging-isolation.test.mjs"]}
+ ],
+ "tdd":{"red":{"commit":"3eadd2a","command":"cd cloudflare-site; node --test test/staging-isolation.test.mjs test/staging-preview.test.mjs","result":"failed","reason":"Entrance check expected clarity-home but selected payment-scenes. Initial preview stub returned404 rather than the shared home200. Later analytics fixture failed because its loader survived in local HTML; stripping fixed it. These tests ran in the working tree; hash identifies the pre-change base, not a committed red snapshot."},"green":{"command":"cd cloudflare-site; node scripts/build.mjs; node --test --experimental-test-isolation=none test/*.test.mjs qa/*.test.mjs; node scripts/audit-site-links.mjs","result":"passed"}},
+ "review":{"status":"passed","report":"engineering/review-offer-clarity.md"},"reuse":{"manifest":"specs/010-offer-clarity/reuse.json"},
+ "limitations":["Comprehension with unfamiliar owners and physical-phone behaviour are not measured.","Chrome stalled after desktop and390px Services/costs checks; remaining layout checks require completion and are not claimed here.","No fixed automation price, SLA, percentage saving, collection result or prediction accuracy is invented.","Staging and local preview remain disconnected. Production merge/deployment is outside this change."]
+}

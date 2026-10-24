@@ -14,3 +14,5 @@
 @media(min-width:701px){h1,h2{font-size:clamp(42px,4.5vw,64px)}}
 @media(max-width:700px){.scene-answer{margin:0 auto}}
 @media print{.scene-header,.scene-controls,.company-footer{display:none!important}.scene-mode,.scene-mode .scene-shell{height:auto;overflow:visible;display:block}.scene-mode .payment-deck,.scene-mode .payment-deck .swiper-wrapper{display:block;overflow:visible;transform:none!important}.scene-mode .payment-deck .swiper-slide{height:auto;break-inside:avoid}.scene-group{min-height:0;padding:20px}.scene-art img{height:200px!important}}
+
+.scene-header nav{display:flex;align-items:center;gap:25px}@media(max-width:700px){.scene-header nav{gap:14px}}
