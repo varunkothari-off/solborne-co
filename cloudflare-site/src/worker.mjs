@@ -129,7 +129,7 @@ async function serveAsset(request,path,env={}) {
   }
   const bytes=Uint8Array.from(atob(entry.body),c=>c.charCodeAt(0));const headers={...safeHeaders,'Content-Type':entry.type,'Cache-Control':'no-cache','ETag':'"'+entry.etag+'"'};
   if(key==='ai-walk.html'){headers['Permissions-Policy']='camera=(), microphone=(self), geolocation=()';if(env.GEMINI_LIVE_TRANSCRIPTION_ENABLED==='true')headers['Content-Security-Policy']=headers['Content-Security-Policy'].replace("connect-src 'self'","connect-src 'self' wss://generativelanguage.googleapis.com");}
-  const marketing=new Set(['/','/websites.html','/how-it-works.html','/about.html','/contact.html','/offer.html','/privacy.html','/terms.html']).has(path);
+  const marketing=new Set(['/','/services.html','/operations.html','/websites.html','/how-it-works.html','/about.html','/contact.html','/offer.html','/privacy.html','/terms.html']).has(path);
   if(entry.schemaHashes?.length||marketing){
     headers['Content-Security-Policy']=headers['Content-Security-Policy'].replace("script-src 'self'",`script-src 'self' ${[...(entry.schemaHashes||[]),...(marketing?['https://www.googletagmanager.com']:[])].join(' ')}`);
     if(marketing)headers['Content-Security-Policy']=headers['Content-Security-Policy'].replace("connect-src 'self'","connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com").replace("img-src 'self' data:","img-src 'self' data: https://www.google-analytics.com https://www.googletagmanager.com");

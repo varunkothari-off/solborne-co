@@ -1,6 +1,8 @@
 import {readFile,access} from 'node:fs/promises';
 
 import {resolve} from 'node:path';
+import {applyShell} from './site-shell.mjs';
+import {applySeo} from './site-seo.mjs';
 
 const pages=['clarity-home.html','services.html','payment-scenes.html','story.html','walk-demo.html','operations.html','index.html','websites.html','how-it-works.html','about.html','contact.html','offer.html','privacy.html','terms.html','start.html','signin.html','canvas.html','walk.html','versions.html','ai-walk.html','example-workshop.html','example-advisory.html','example-studio.html'];
 
@@ -8,7 +10,7 @@ const failures=[],external=new Set();let links=0,assets=0;
 
 for(const page of pages){
 
- const html=await readFile('public/'+page,'utf8');
+ const html=applySeo(applyShell(await readFile('public/'+page,'utf8'),'/'+page),'/'+page);
 
  for(const match of html.matchAll(/\b(href|src)="([^"]+)"/g)){
 
@@ -38,7 +40,7 @@ for(const page of pages){
 
    if(url.hash&&path.endsWith('.html')){
 
-    const content=await readFile(target,'utf8'),id=decodeURIComponent(url.hash.slice(1));
+    const content=applySeo(applyShell(await readFile(target,'utf8'),path),path),id=decodeURIComponent(url.hash.slice(1));
 
     if(!content.includes('id="'+id+'"')&&!content.includes("id='"+id+"'"))failures.push(page+': missing anchor '+raw);
 

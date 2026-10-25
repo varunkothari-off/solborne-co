@@ -1,0 +1,22 @@
+/* Responsive bridge for the shared stable shell. Brand type, colours and controls stay in design.css. */
+html:root{--solborne-header-height:90px;scroll-padding-top:calc(var(--solborne-header-height) + 20px)}
+
+/* The existing design.js owns .enhanced, #site-nav.open and aria-expanded. */
+@media(max-width:1040px){
+ html:root{--solborne-header-height:76px}
+ .header[data-site-shell="header"]{height:76px;min-height:76px;padding:14px 20px;flex-wrap:nowrap}
+ .header[data-site-shell="header"] .menu:not([hidden]){display:block}
+ .header[data-site-shell="header"].enhanced #site-nav{display:none}
+ .header[data-site-shell="header"].enhanced #site-nav.open{display:flex;position:absolute;top:75px;left:0;right:0;width:auto;padding:24px;background:var(--paper);border-bottom:1px solid var(--line);flex-direction:column;align-items:stretch;justify-content:flex-start;gap:17px;text-align:center;max-height:calc(100dvh - 76px);overflow-y:auto;overscroll-behavior:contain}
+ .header[data-site-shell="header"].enhanced #site-nav>a{min-height:44px}
+ .header[data-site-shell="header"]:not(.enhanced){height:auto;flex-wrap:wrap}
+ .header[data-site-shell="header"]:not(.enhanced) #site-nav{display:flex;flex-wrap:wrap;justify-content:center;width:100%;gap:12px 20px}
+}
+
+/* These mobile illustrations belong below the common 76px sticky header. Desktop placement is unchanged. */
+@media(max-width:760px){
+ body .demo-layout .demo-board{top:76px}
+}
+@media(max-width:760px) and (prefers-reduced-motion:no-preference){
+ html.story-enhanced body .story-layout .story-canvas{top:76px}
+}

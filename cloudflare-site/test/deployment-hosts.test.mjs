@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import worker from '../deployment-worker.mjs';
+import {applyShell} from '../scripts/site-shell.mjs';
+import {applySeo} from '../scripts/site-seo.mjs';
 const env={SITE_ORIGIN:'https://solborne.in',DB:{prepare(){throw new Error('Unexpected database access before canonical host authorization');}}};
 test('all existing aliases and HTTP use one canonical destination with exact encoded path/query',async()=>{
  for(const host of ['solborne.in','www.solborne.in','getsolborne.com','www.getsolborne.com'])for(const scheme of ['http','https'])for(const method of ['GET','HEAD']){
@@ -23,8 +25,9 @@ test('unsafe methods on aliases or HTTP canonical reject without database side e
 test('canonical POST reaches the original server origin/CSRF protections',async()=>{
  const response=await worker.fetch(new Request('https://solborne.in/api/registrations',{method:'POST',headers:{Origin:'https://evil.test','Content-Type':'application/json'},body:'{}'}),env);assert.equal(response.status,403);assert.equal((await response.json()).code,'origin_required');
 });
-test('canonical public HTML keeps the exact reviewed bytes and CSP and blocks edge transformation',async()=>{
- const response=await worker.fetch(new Request('https://solborne.in/'),env);assert.equal(response.status,200);assert.deepEqual(Buffer.from(await response.arrayBuffer()),readFileSync('public/index.html'));assert.match(response.headers.get('Cache-Control'),/no-transform/);assert.match(response.headers.get('Content-Security-Policy'),/script-src 'self' /);assert.match(response.headers.get('Content-Security-Policy'),/sha256-/);assert.doesNotMatch(response.headers.get('Content-Security-Policy'),/cloudflareinsights|unsafe-eval/);
+test('canonical public HTML keeps the exact assembled reviewed bytes and CSP and blocks edge transformation',async()=>{
+ const reviewed=applySeo(applyShell(readFileSync('public/index.html','utf8'),'/index.html'),'/index.html');
+ const response=await worker.fetch(new Request('https://solborne.in/'),env);assert.equal(response.status,200);assert.deepEqual(Buffer.from(await response.arrayBuffer()),Buffer.from(reviewed));assert.match(response.headers.get('Cache-Control'),/no-transform/);assert.match(response.headers.get('Content-Security-Policy'),/script-src 'self' /);assert.match(response.headers.get('Content-Security-Policy'),/sha256-/);assert.doesNotMatch(response.headers.get('Content-Security-Policy'),/cloudflareinsights|unsafe-eval/);
 });
 test('private canvas and native/admin/source paths remain closed with forged identity',async()=>{
  for(const path of ['/downloads/canvas.pdf','/downloads/canvas.txt','/admin','/api/admin/registrations','/signin-with-chatgpt','/private/canvas.pdf','/dist/server/index.js','/assets/solborne-workflow-opportunity-canvas.pdf']){

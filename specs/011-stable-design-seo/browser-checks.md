@@ -1,0 +1,11 @@
+# Stable comparison and rendered acceptance
+
+25 October2026. Live stable homepage was opened read-only and compared to the local candidate at1280x720. Both measured Public/Arial body16px with line-height26.4px, heading weight500 at84.48px/87.8592px, header90px and pill border radius100px. Stable footer and candidate wordmark both used the same oversized serif treatment; candidate lockup1184px fit its1185px area after existing lettering enhancement. Services rendered its preserved scope with the stable scale/spacing/controls. The original office/atelier illustration component is reused and labelled illustrative.
+
+At360px, Services document width345px stayed within the viewport, header76px and the existing Menu opened all routes including Services. At960px the expanded navigation fit; at800px it became crowded. The completed bridge now uses the existing Menu at800px, a76px header, no horizontal overflow and all routes visible when opened. The independent reviewer re-reviewed that correction and the demo/story sticky offsets.
+
+The mobile full footer lockup measured304.03px within305px. The payment player occupied477px below its header, with the full footer starting at639px; wheel changed1to2 while scrollY stayed0. An actual pointer click on Previous changed3to2 while scrollY remained0. Locator click helpers can scroll their target to the centre, so actual pointer input was used to distinguish the player from that test-driver behaviour. The explicit Company & links anchor reached the same full footer. The Walk demo board was sticky at76px, exactly below the76px header. Viewport override was reset.
+
+Automated checks verify the same rendered footer on14 public documents, private-page exclusions, shell idempotence, retained body text, SEO metadata and canonical aliases, Service data, CSP hashes computed after assembly, and staging noindex. The previous exact-raw-index byte test was adapted to exact assembled source bytes; no-transform/CSP/host protections remain asserted. No production change or measured search outcome is implied.
+
+Final local suite:389passed,0failed. Build161assets. Shared-output link audit passed with0failures. Independent review:engineering/review-stable-design-seo.md. Actual deployed-version checks follow in the release receipt.

@@ -1,4 +1,6 @@
 import {assertHomepages} from './home-contract.mjs';
+import {applyShell} from './site-shell.mjs';
+import {applySeo} from './site-seo.mjs';
 
 assertHomepages();
 
@@ -10,7 +12,7 @@ import { createHash } from 'node:crypto';
 
 const mime={html:'text/html; charset=utf-8',js:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',mp4:'video/mp4',jpg:'image/jpeg',svg:'image/svg+xml',woff2:'font/woff2',txt:'text/plain; charset=utf-8',pdf:'application/pdf',png:'image/png',xml:'application/xml; charset=utf-8'};
 
-const entries={};async function scan(dir){for(const entry of await readdir(dir,{withFileTypes:true})){const p=join(dir,entry.name);if(entry.isDirectory())await scan(p);else {const b=await readFile(p);const schemaHashes=p.endsWith('.html')?[...b.toString('utf8').matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m=>"'sha256-"+createHash('sha256').update(m[1]).digest('base64')+"'"):[];entries[relative('public',p).replaceAll('\\','/')]={body:b.toString('base64'),type:mime[p.split('.').at(-1)]||'application/octet-stream',etag:createHash('sha256').update(b).digest('hex').slice(0,24),schemaHashes};}}}
+const entries={};async function scan(dir){for(const entry of await readdir(dir,{withFileTypes:true})){const p=join(dir,entry.name);if(entry.isDirectory())await scan(p);else {let b=await readFile(p);const assetPath='/'+relative('public',p).replaceAll('\\','/');if(p.endsWith('.html'))b=Buffer.from(applySeo(applyShell(b.toString('utf8'),assetPath),assetPath),'utf8');const schemaHashes=p.endsWith('.html')?[...b.toString('utf8').matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m=>"'sha256-"+createHash('sha256').update(m[1]).digest('base64')+"'"):[];entries[relative('public',p).replaceAll('\\','/')]={body:b.toString('base64'),type:mime[p.split('.').at(-1)]||'application/octet-stream',etag:createHash('sha256').update(b).digest('hex').slice(0,24),schemaHashes};}}}
 
 await copyFile('src/website.mjs','public/website-renderer.js');
 
