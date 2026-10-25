@@ -2,7 +2,8 @@ import {answerFileMetadata} from './walk-files.mjs';
 import {aiFields} from './ai-walk-fields.mjs';
 import {designText,answerSketchMetadata} from './walk-design.mjs';
 import {businessBriefFields} from './walk-meta-prompt.mjs';
-export const VERSION='walk-v6-grounded-conversational-answer-help-sketch-20261021';
+import {normalizeJourney,requirementsForJourney,journeyPrompt} from './walk-journey.mjs';
+export const VERSION='walk-v6-grounded-jtbd-journeys-20261024';
 export const PROMPT=`You are the interviewer for Solborne & Co.'s Walk of Fame. Understand THIS business well enough for a distinct, useful business website and a needs-led automation proposal. You have no research, calling, lender, publishing or website-generation tools. All you can do is interview and prepare a private handoff. Never claim work outside this conversation occurred.
 
 DESIGN INPUT AND REUSE
@@ -67,8 +68,6 @@ function sourceMatches(text,quote){
 }
 
 const identity=new Set(['businessName','email','phone','websiteUrl','legalName','entityType','businessAddress','complaintsContact']);
-const requiredFacts=['businessName','description','audience','services','callToAction','industry','legalName','entityType','businessAddress'];
-const requiredBrief=['customerJourney','primaryPain','desiredOutcome','successMeasure','humanApprovals','confirmedPriority','freeScope'];
 function canonicalIdentity(update,text){
  const u={...update};
  if(u.target!=='facts')return u;
@@ -92,10 +91,11 @@ function similarQuestion(a,b){
  return [...x].filter(k=>y.has(k)).length/Math.max(x.size,y.size)>=.75;
 }
 function recoverQuestion(next,missing,history){
+ const questions={...gapQuestions,...(normalizeJourney(next.journey).intent==='operations'?{customerJourney:['operations','service_journey','Think of the last time this work got stuck. What happened?'],primaryPain:['priority','priority','Where does this work get stuck most often?'],currentWorkaround:['operations','service_journey','How do you handle this work today?'],humanApprovals:['operations','service_journey','When should a person step in?'],confirmedPriority:['priority','priority','Is this the improvement you want us to focus on first?']}:{})};
  const recent=history.filter(x=>x?.question).slice(-4);
  const ordered=[...missing.filter(x=>!/(?:legalName|entityType|businessAddress|public contact)/.test(x)),...missing.filter(x=>/(?:legalName|entityType|businessAddress|public contact)/.test(x))];
- const gap=ordered.find(x=>gapQuestions[x.split('.').at(-1)]&&!recent.some(h=>similarQuestion(h.question,gapQuestions[x.split('.').at(-1)][2])))||ordered[0];
- const item=gapQuestions[gap?.split('.').at(-1)]||['review','other','What would you like to clarify before reviewing your draft?'];
+ const gap=ordered.find(x=>questions[x.split('.').at(-1)]&&!recent.some(h=>similarQuestion(h.question,questions[x.split('.').at(-1)][2])))||ordered[0];
+ const item=questions[gap?.split('.').at(-1)]||['review','other','What would you like to clarify before reviewing your draft?'];
  next.message='We can keep the unanswered detail open and continue with the next useful step.';
  [next.stage,next.nextTopic,next.question]=item;next.answerIdeas=[];next.questionRecovery=true;
 }
@@ -120,8 +120,10 @@ export function applyReply(state,reply){
   next[u.target][u.field]=u.value.trim();next.evidence[u.target+'.'+u.field]={sourceTurn:u.sourceTurn,quote:u.quote,kind:u.kind,status:u.kind==='owner_stated'?'owner_reported_not_independently_verified':u.kind};
  }
  const good=(target,k)=>!!next[target][k]&&!/^(unknown|not provided|tbd|pending|deferred)/i.test(next[target][k])&&next.evidence[target+'.'+k]?.kind==='owner_stated';
- const missing=[...requiredFacts.filter(k=>!good('facts',k)).map(k=>'facts.'+k),...requiredBrief.filter(k=>!good('businessBrief',k)).map(k=>'businessBrief.'+k)];
- if(!['email','phone','websiteUrl'].some(k=>good('facts',k)))missing.push('public contact');
+ const requirements=requirementsForJourney(next.journey);
+ const acceptedBrief=k=>good('businessBrief',k)||normalizeJourney(next.journey).intent==='website'&&k!=='freeScope'&&!!next.businessBrief[k]&&next.evidence['businessBrief.'+k]?.kind==='deferred';
+ const missing=[...requirements.facts.filter(k=>!good('facts',k)).map(k=>'facts.'+k),...requirements.brief.filter(k=>!acceptedBrief(k)).map(k=>'businessBrief.'+k)];
+ if(requirements.contact&&!['email','phone','websiteUrl'].some(k=>good('facts',k)))missing.push('public contact');
  next.missing=missing;next.ready=reply.ready&&missing.length===0&&blocked.length===0;next.lastBlocked=blocked.map(x=>({field:x.target+'.'+x.field,reason:x.reason}));
  const history=state.questionHistory||state.messages||[];
  next.questionRecovery=false;
@@ -142,7 +144,7 @@ function providerSchema(value){
  return next;
 }
 export function makePayload(state,{model,repair=''}={}){
- return {systemInstruction:{parts:[{text:PROMPT}]},contents:[{role:'user',parts:[{text:JSON.stringify({fileAttachments:answerFileMetadata(state),sketchAttachments:answerSketchMetadata(state),designPreferences:designText(state),ownerMessages:state.ownerMessages,currentDraft:{facts:state.facts,businessBrief:state.businessBrief,evidence:state.evidence,missing:state.missing},lastQuestions:state.messages.slice(-4),previousBlocked:state.lastBlocked||[],repairInstruction:repair})}]}],generationConfig:{temperature:.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:providerSchema(schema),...(model==='gemini-4-argon'?{thinkingConfig:{thinkingLevel:'medium'}}:{})}};
+ return {systemInstruction:{parts:[{text:journeyPrompt(PROMPT,state.journey)}]},contents:[{role:'user',parts:[{text:JSON.stringify({journey:normalizeJourney(state.journey),fileAttachments:answerFileMetadata(state),sketchAttachments:answerSketchMetadata(state),designPreferences:designText(state),ownerMessages:state.ownerMessages,currentDraft:{facts:state.facts,businessBrief:state.businessBrief,evidence:state.evidence,missing:state.missing},lastQuestions:state.messages.slice(-4),previousBlocked:state.lastBlocked||[],repairInstruction:repair})}]}],generationConfig:{temperature:.35,maxOutputTokens:4096,responseMimeType:'application/json',responseJsonSchema:providerSchema(schema),...(model==='gemini-4-argon'?{thinkingConfig:{thinkingLevel:'medium'}}:{})}};
 }
 
 async function readBoundedResponse(response,maxBytes=120000){

@@ -1,0 +1,8 @@
+{
+ "components":[
+  {"source":"https://registry.npmjs.org/swiper/-/swiper-14.3.0.tgz","version":"14.3.0; sha512-qw0Xv1+sylM8KCQxWxV2iYAK2G6XjFGPZ/8F1baEsY8DK4A3sTnLx6jUJ0G71rDbVQ05JHMWkcWmJ5NvlxZO0w==","license":"MIT","licenseFile":"cloudflare-site/public/vendor/swiper/LICENSE","usage":"Official unchanged local bundle and CSS. Built-in slide, mousewheel, touch, keyboard, navigation and a11y. No custom animation engine. Archive integrity matches the npm registry value."},
+  {"source":"https://storyset.com/illustration/overwhelmed/cuate","version":"SVG downloaded 2026-10-24; SHA256 a43f17b51608204d31585e4b61913d03c253c960b3bb6b0beec7ac5818e6c716","license":"Freepik/Storyset terms; commercial website use and modification with visible attribution","usage":"burden.svg; stock accent recoloured only. Full source and rights record in assets.md."},
+  {"source":"https://storyset.com/illustration/payment-information/cuate","version":"SVG downloaded 2026-10-24; SHA256 27bf77faf474b82af8d70a3c4daf88fce56f46343162cee7a049d43ae43ae9d4","license":"Freepik/Storyset terms; commercial website use and modification with visible attribution","usage":"followup.svg; stock accent recoloured only; illustrative payment form, not live UI or pricing. Visible Storyset link."},
+  {"source":"https://storyset.com/illustration/business-solution/cuate","version":"SVG downloaded 2026-10-24; SHA256 57c94a56d05ee2b427b619f21192074bd0923ccede47132a21d32afd30b33d19","license":"Freepik/Storyset terms; commercial website use and modification with visible attribution","usage":"owner.svg; stock accent recoloured only; object-fit contain preserves original wider proportions. Visible Storyset link."}
+ ]
+}

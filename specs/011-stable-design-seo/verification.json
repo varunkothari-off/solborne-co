@@ -1,0 +1,13 @@
+{
+ "feature":"011-stable-design-seo","spec":"specs/011-stable-design-seo/spec.md","plan":"specs/011-stable-design-seo/plan.md","tasks":"specs/011-stable-design-seo/tasks.md",
+ "acceptance":[
+  {"id":"AC-01","tests":["cloudflare-site/test/site-shell.test.mjs","specs/011-stable-design-seo/browser-checks.md"]},
+  {"id":"AC-02","tests":["cloudflare-site/test/design-shell-integration.test.mjs","cloudflare-site/test/site-shell.test.mjs","cloudflare-site/test/launch-seo-analytics.test.mjs"]},
+  {"id":"AC-03","tests":["cloudflare-site/test/site-seo.test.mjs","cloudflare-site/test/design-shell-integration.test.mjs","cloudflare-site/test/staging-isolation.test.mjs"]},
+  {"id":"AC-04","tests":["specs/011-stable-design-seo/browser-checks.md","cloudflare-site/test/payment-scenes.test.mjs","cloudflare-site/scripts/audit-site-links.mjs"]},
+  {"id":"AC-05","tests":["cloudflare-site/test/deployment-hosts.test.mjs","cloudflare-site/test/staging-isolation.test.mjs","cloudflare-site/test/staging-preview.test.mjs"]}
+ ],
+ "tdd":{"red":{"commit":"2c04249","command":"cd cloudflare-site; node --test test/design-shell-integration.test.mjs test/site-shell.test.mjs test/site-seo.test.mjs","result":"failed","reason":"Before integration the assembled footer lacked the canonical working preferences link and Services had no schema. Shell no-op checks reported3 failures; SEO checks reported3 failures before their implementations. Hash is the pre-change base; tests ran in the working tree. Analytics anchor prevention regression was added after its one-line fix because the earlier test edit failed on an incorrect working directory; no test-first chronology is claimed for that individual fix."},"green":{"command":"cd cloudflare-site; node scripts/build.mjs; node --test --experimental-test-isolation=none test/*.test.mjs qa/*.test.mjs; node scripts/audit-site-links.mjs","result":"passed"}},
+ "review":{"status":"passed","report":"engineering/review-stable-design-seo.md"},"reuse":{"manifest":"specs/011-stable-design-seo/reuse.json"},
+ "limitations":["Search inclusion, ranking and AI citations are external outcomes; metadata and structured data do not guarantee them.","Staging deliberately remains noindex and disconnected. Production promotion requires separate approval.","Physical-phone behaviour and customer comprehension are not established by viewport checks."]
+}

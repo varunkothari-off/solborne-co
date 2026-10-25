@@ -1,0 +1,5 @@
+{"components":[
+ {"source":"https://github.com/varunkothari-off/solborne-co","version":"98e9d963 stable design, verified against live site25Oct2026","license":"Owner-authorized project reuse; existing font and third-party notices retained","usage":"Reuse unchanged studio-motion design/footer/reboot CSS, design.js, letters.js, office/atelier visual, header/footer markup, Public Sans and serif wordmark treatment. New CSS adapts layout rather than introducing a theme."},
+ {"source":"https://storyset.com/illustration/payment-information/cuate","version":"Existing recoloured assets recorded in specs/009-reused-payment-scenes/assets.md","license":"Freepik/Storyset website use/modification with visible attribution","usage":"Existing workflow illustrations retained; one canonical footer preserves visible Storyset credit on every public page."},
+ {"source":"https://developers.google.com/search/docs/fundamentals/ai-optimization-guide","version":"Official guidance checked25Oct2026","license":"Documentation reference, no copied implementation","usage":"Ordinary crawlable helpful HTML, accurate entities and metadata; no special-AI-schema or ranking guarantee."}
+]}

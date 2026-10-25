@@ -27,7 +27,7 @@ box.innerHTML='<div><strong>Help us understand what works?</strong><p>Optional G
 document.body.append(box);
 function choose(value){remember(value);box.hidden=true;if(value==='granted')enable();else{window['ga-disable-'+id]=true;if(window.gtag)window.gtag('consent','update',{analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});cleanCookies();if(loaded)location.reload();}}
 box.querySelector('[data-allow]').addEventListener('click',()=>choose('granted'));box.querySelector('[data-decline]').addEventListener('click',()=>choose('denied'));
-document.querySelectorAll('[data-analytics-settings]').forEach(el=>el.addEventListener('click',()=>{box.hidden=false;box.querySelector('[data-decline]').focus();}));
+document.querySelectorAll('[data-analytics-settings]').forEach(el=>el.addEventListener('click',event=>{event?.preventDefault?.();box.hidden=false;box.querySelector('[data-decline]').focus();}));
 document.addEventListener('click',e=>{if(saved()!=='granted'||!loaded)return;const a=e.target.closest('a');if(!a)return;let kind=null;
  try{const u=new URL(a.href);if(u.origin===location.origin&&u.pathname==='/start.html')kind='start_website';else if(u.protocol==='mailto:')kind='email_contact';else if(u.origin==='https://kfs.solborne.in')kind='view_kfs_example';}catch{}
  if(kind)window.gtag('event','cta_click',{cta_kind:kind,page_location:location.origin+location.pathname});

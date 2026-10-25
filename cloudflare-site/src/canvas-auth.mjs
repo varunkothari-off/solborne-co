@@ -45,7 +45,11 @@ export async function authRoute(request,env,now,{fetcher=fetch}={}){
       FROM solborne_auth_registrations a JOIN solborne_registrations r ON r.id=a.registration_id LEFT JOIN solborne_ai_walks w ON w.registration_id=a.registration_id WHERE a.user_id=? ORDER BY a.created_at DESC,a.registration_id DESC`,[user.id]):[];
     const registrations=rows.map(({state_json,latest_facts,has_release,...item})=>{
       let state={},facts={};try{state=JSON.parse(state_json||'{}');facts=JSON.parse(latest_facts||'{}');}catch{/* A damaged legacy draft must not expose private data or break other projects. */}
-      return {...item,projectName:String(state.facts?.businessName||facts.businessName||'Untitled project').slice(0,120),website:String(state.facts?.websiteUrl||facts.websiteUrl||'').slice(0,1500),projectStatus:has_release?'delivered':state.submission?'awaiting_manual_review':state.ready?'brief_ready':'in_progress',submittedAt:state.submission?.submittedAt||null};
+      const operations=state?.journey?.intent==='operations'||state?.submission?.service==='operations';
+      const journey={intent:operations?'operations':'website',workflow:operations&&['payments','documents','quotes'].includes(state?.journey?.workflow)?state.journey.workflow:''};
+      const reviewStatus=['awaiting_manual_review','in_review','awaiting_customer','proposal_ready','completed'].includes(state?.submission?.status)?state.submission.status:'awaiting_manual_review';
+      const projectStatus=!operations&&has_release?'delivered':state?.submission?reviewStatus:state?.ready?'brief_ready':'in_progress';
+      return {...item,projectName:String(state?.facts?.businessName||facts?.businessName||'Untitled project').slice(0,120),website:String(state?.facts?.websiteUrl||facts?.websiteUrl||'').slice(0,1500),journey,projectStatus,submittedAt:Number.isSafeInteger(state?.submission?.submittedAt)&&state.submission.submittedAt>=0?state.submission.submittedAt:null};
     });
     let csrf=cookie(request,CSRF);if(!hex.test(csrf))csrf=random();
     return json({ok:true,configured,enabled,providers:{google:enabled&&configured&&env.AUTH_GOOGLE_ENABLED==='true',email:enabled&&configured&&env.AUTH_EMAIL_ENABLED==='true'},authenticated:!!user,user:user?{email:user.email,name:user.name}:null,registered:!!user?.registration_id,activeRegistration:user?.registration_id||null,registrations,csrf},200,{'Set-Cookie':setCookie(CSRF,csrf)});

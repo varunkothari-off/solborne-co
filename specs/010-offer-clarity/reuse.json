@@ -1,0 +1,5 @@
+{"components":[
+ {"source":"https://github.com/varunkothari-off/solborne-co","version":"3eadd2a baseline","license":"Owner-authorized project source reuse; existing third-party rights retained","usage":"Existing brand wordmark, bearing, Public Sans font, real website showcases, offer/terms and isolated staging wrapper. New UI remains vanilla HTML/CSS."},
+ {"source":"https://storyset.com/illustration/business-solution/cuate","version":"2026-10-24 local asset57c94a56d05ee2b427b619f21192074bd0923ccede47132a21d32afd30b33d19","license":"Freepik/Storyset terms, website use/modification with visible attribution","usage":"Reuse existing recoloured owner.svg and followup.svg, source/rights record in specs/009-reused-payment-scenes/assets.md. Visible Storyset credit on homepage and retained story."},
+ {"source":"https://nodejs.org/api/http.html","version":"Node24.19.0 runtime","license":"MIT","usage":"Built-in HTTP/filesystem APIs for loopback-only disconnected preview; no new dependency or browser automation server."}
+]}

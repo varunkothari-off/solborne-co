@@ -1,4 +1,6 @@
 User-agent: *
+# Crawler permissions are unchanged. Private and example HTML also receive noindex
+# from the Worker; robots.txt is not access control. Staging overrides all responses.
 Allow: /
 Disallow: /api/
 Disallow: /admin

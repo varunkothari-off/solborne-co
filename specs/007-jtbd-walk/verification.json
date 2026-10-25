@@ -1,0 +1,21 @@
+{
+ "feature":"007-jtbd-walk",
+ "spec":"specs/007-jtbd-walk/spec.md",
+ "plan":"specs/007-jtbd-walk/plan.md",
+ "tasks":"specs/007-jtbd-walk/tasks.md",
+ "acceptance":[
+  {"id":"AC-01","tests":["cloudflare-site/test/homepage-contract.test.mjs","cloudflare-site/scripts/audit-site-links.mjs"]},
+  {"id":"AC-02","tests":["cloudflare-site/test/entry-intent.test.mjs","cloudflare-site/test/jtbd-navigation.test.mjs","cloudflare-site/test/projects.test.mjs","cloudflare-site/test/ai-walk.test.mjs"]},
+  {"id":"AC-03","tests":["cloudflare-site/test/jtbd-walk.test.mjs","cloudflare-site/test/argon-walk.test.mjs"]},
+  {"id":"AC-04","tests":["cloudflare-site/test/ai-walk-frontend.test.mjs","cloudflare-site/test/jtbd-walk.test.mjs"]},
+  {"id":"AC-05","tests":["cloudflare-site/test/jtbd-walk.test.mjs","cloudflare-site/test/walk-handoffs.test.mjs","cloudflare-site/test/projects.test.mjs"]},
+  {"id":"AC-06","tests":["cloudflare-site/test/ai-walk-frontend.test.mjs","cloudflare-site/scripts/audit-site-links.mjs"]}
+ ],
+ "tdd":{
+  "red":{"commit":"98e9d96","command":"cd cloudflare-site; node --test test/entry-intent.test.mjs test/jtbd-navigation.test.mjs test/ai-walk-frontend.test.mjs; node --test test/jtbd-walk.test.mjs","result":"failed","reason":"New working-tree tests against pre-change behaviour failed for lost operations context, unchanged website redirect/summary, operations readiness/handoff and missing persistence. The commit identifies the base code, not a separately committed red snapshot. Later regression: recovery returned409 rather than200 until journey was excluded from identity hash."},
+  "green":{"command":"cd cloudflare-site; node scripts/build.mjs; node --test --experimental-test-isolation=none test/*.test.mjs qa/*.test.mjs; node scripts/audit-site-links.mjs","result":"passed"}
+ },
+ "review":{"status":"passed","report":"engineering/review-jtbd-walk.md"},
+ "reuse":{"manifest":"specs/007-jtbd-walk/reuse.json"},
+ "limitations":["Rendered checks use local static pages and synthetic private API responses, not a live model or signed-in customer.","No physical-phone check or production handoff update executed.","Implementation is a review candidate, not a production release or automatic fulfilment dispatcher."]
+}

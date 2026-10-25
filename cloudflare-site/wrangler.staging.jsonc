@@ -1,0 +1,11 @@
+{
+  "name": "solborne-staging",
+  "account_id": "18e2e0a5c446f761822775d3ce5b5d7d",
+  "main": "staging-worker.mjs",
+  "tsconfig": "tsconfig.worker.json",
+  "compatibility_date": "2026-10-08",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{"pattern": "staging.solborne.in", "custom_domain": true}],
+  "vars": {"SITE_ORIGIN": "https://staging.solborne.in"}
+}
